@@ -9,7 +9,7 @@ from base64 import b64decode
 import json
 import yaml
 
-path = Path(__file__).parent
+path = Path(__file__).resolve().parent
 configPath = path / 'Config.yaml'
 v2rayPath = path / 'V2ray-Config.json'
 
