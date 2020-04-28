@@ -8,10 +8,26 @@
 
 将 v2ray 配置文件置于此脚本所在目录, 并重命名为 `V2ray-Config.json`. 运行此脚本
 
-可选地, 向 PATH 中添加此脚本的软链接
+可选地, 向 PATH 中添加此脚本的符号链接
 
 ```sh
 ln -s ./V2ray-Manager.py ~/.local/bin/v2man
+```
+
+# 示例
+
+```
+1      洛杉矶              example.com
+2      日本                example.com
+默认出站: freedom
+要连接的配置: example.com
+在前台运行 V2ray: True
+使用 sudo 运行 V2ray: False
+
+键入: vmess 连接配置, 或订阅地址, 或 u 以更新订阅, 或要连接的配置序号,
+      或 "gfw google.com"/"cn 223.5.5.5" 向黑白名单列表添加域名或 IP,
+      或 d 以切换默认出站, 或 f 以切换前台运行 V2ray, 或 s 以切换使用 sudo 运行 V2ray
+      或回车以保存配置并运行, 或 q 以保存配置并退出
 ```
 
 # 免责声明
