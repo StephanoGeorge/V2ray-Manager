@@ -132,11 +132,13 @@ def addAddr():
             addr = removeSchema(addr)
         domainItem = 'domain:{}'.format(addr)
         if target == 'gfw':
-            gfwDomain.append(domainItem)
+            if len(gfwDomain) != 0:
+                gfwDomain.append(domainItem)
             if len(dnsGfw) != 0:
                 dnsGfw.append(domainItem)
         else:
-            cnDomain.append(domainItem)
+            if len(cnDomain) != 0:
+                cnDomain.append(domainItem)
             if len(dnsCn) != 0:
                 dnsCn.append(domainItem)
     else:
