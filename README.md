@@ -6,13 +6,47 @@
 
 # 使用方法
 
-将 v2ray 配置文件置于此脚本所在目录, 并重命名为 `V2ray-Config.json`. 运行此脚本
+## 首次运行
 
-可选地, 向 PATH 中添加此脚本的符号链接
+将 v2ray 配置文件置于此脚本所在目录, 并重命名为 `V2ray-Config.json`.
+
+确保配置中的 `vmess` 出站包含以下形式的 `streamSettings`:
+
+```json
+"streamSettings": {
+    "network": "",
+    "kcpSettings": {
+        "header": {
+            "type": ""
+        }
+    },
+    "quicSettings": {
+        "header": {
+            "type": ""
+        }
+    },
+    "tcpSettings": {
+        "header": {
+            "type": ""
+        }
+    },
+    "wsSettings": {
+        "headers": {
+            "Host": ""
+        },
+        "path": ""
+    },
+```
+
+可选地, 向 PATH 中添加此脚本的符号链接:
 
 ```sh
 ln -s ./V2ray-Manager.py ~/.local/bin/v2man
 ```
+
+## 运行
+
+运行此脚本
 
 # 示例
 
