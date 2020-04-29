@@ -41,7 +41,7 @@
 可选地, 向 PATH 中添加此脚本的符号链接:
 
 ```sh
-ln -s ./V2ray-Manager.py ~/.local/bin/v2man
+ln -s $PWD/V2ray-Manager.py ~/.local/bin/v2man
 ```
 
 ## 运行
