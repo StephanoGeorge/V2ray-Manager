@@ -133,19 +133,37 @@ def addAddr():
         domainItem = 'domain:{}'.format(addr)
         if target == 'gfw':
             if len(gfwDomain) != 0:
-                gfwDomain.append(domainItem)
+                if domainItem in gfwDomain:
+                    print('{} 已经存在于 GFW domains'.format(domainItem))
+                else:
+                    gfwDomain.append(domainItem)
             if len(dnsGfw) != 0:
-                dnsGfw.append(domainItem)
+                if domainItem in dnsGfw:
+                    print('{} 已经存在于 GFW DNS domains'.format(domainItem))
+                else:
+                    dnsGfw.append(domainItem)
         else:
             if len(cnDomain) != 0:
-                cnDomain.append(domainItem)
+                if domainItem in cnDomain:
+                    print('{} 已经存在于 CN domains'.format(domainItem))
+                else:
+                    cnDomain.append(domainItem)
             if len(dnsCn) != 0:
-                dnsCn.append(domainItem)
+                if domainItem in dnsCn:
+                    print('{} 已经存在于 CN DNS domains'.format(domainItem))
+                else:
+                    dnsCn.append(domainItem)
     else:
         if target == 'gfw':
-            gfwIp.append(addr)
+            if addr in gfwIp:
+                print('{} 已经存在于 GFW IPs'.format(addr))
+            else:
+                gfwIp.append(addr)
         else:
-            cnIp.append(addr)
+            if addr in cnIp:
+                print('{} 已经存在于 CN IPs'.format(addr))
+            else:
+                cnIp.append(addr)
 
 
 while True:
