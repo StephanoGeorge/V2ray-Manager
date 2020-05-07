@@ -35,13 +35,13 @@ def generateAndRestartAndExit():
     saveConfig()
     if config['useSudo']:
         os.system('sudo whoami')
-        os.system('sudo killall v2ray')
+        os.system('sudo killall v2ray > /dev/null 2>&1')
         if config['runInFront']:
             os.system('sudo v2ray -config {}'.format(v2rayPath.resolve()))
         else:
             os.system('nohup sudo v2ray -config {} > /dev/null 2>&1 &'.format(v2rayPath.resolve()))
     else:
-        os.system('killall v2ray')
+        os.system('killall v2ray > /dev/null 2>&1')
         if config['runInFront']:
             os.system('v2ray -config {}'.format(v2rayPath.resolve()))
         else:
