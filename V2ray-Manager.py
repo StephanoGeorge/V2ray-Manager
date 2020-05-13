@@ -207,12 +207,13 @@ while True:
         mainVnext['address'] = connectII['add']
         mainVnext['port'] = int(connectII['port'])
         mainUser['id'] = connectII['id']
-        mainUser['alterId'] = connectII['aid']
+        mainUser['alterId'] = int(connectII['aid'])
         streamSettings['network'] = connectII['net']
+        streamSettings['security'] = connectII['tls']
         streamSettings['tcpSettings']['header']['type'] = connectII['type']
         streamSettings['kcpSettings']['header']['type'] = connectII['type']
         streamSettings['quicSettings']['header']['type'] = connectII['type']
-        wsSettings['headers'] = connectII['host']
+        wsSettings['headers']['Host'] = connectII['host']
         wsSettings['path'] = connectII['path']
     elif inputStr.startswith('vmess://'):
         # 连接配置
