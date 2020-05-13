@@ -212,7 +212,7 @@ while True:
         streamSettings['tcpSettings']['header']['type'] = connectII['type']
         streamSettings['kcpSettings']['header']['type'] = connectII['type']
         streamSettings['quicSettings']['header']['type'] = connectII['type']
-        wsSettings['headers'] = connectII['host'] if connectII['add'] != connectII['host'] else 'microsoft.com'
+        wsSettings['headers'] = connectII['host']
         wsSettings['path'] = connectII['path']
     elif inputStr.startswith('vmess://'):
         # 连接配置
