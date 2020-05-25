@@ -1,12 +1,13 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
 import itertools
+import json
 import os
 import re
-from pathlib import Path
-import requests
 from base64 import b64decode
-import json
+from pathlib import Path
+
+import requests
 import yaml
 
 path = Path(__file__).resolve().parent
@@ -17,55 +18,63 @@ configPath.touch()
 with configPath.open() as configStream:
     config = yaml.safe_load(configStream)
 if config is None:
-    config = {'runInFront': False, 'useSudo': False, 'imported': []}
+    config = {'runInFront': False, 'useSudo': False, 'imported': [], 'subscriptions': {},
+              'config': {
+                  'routing': {
+                      'rules': [],
+                      '_category-ads-all': {}
+                  }
+              }}
 with v2rayPath.open() as v2rayStream:
     v2ray = json.load(v2rayStream)
 
+subscriptions = config['subscriptions']
 outBounds = v2ray['outbounds']
 
 
 def saveConfig():
-    with configPath.open('w') as configStreamI:
-        yaml.safe_dump(config, configStreamI, indent=4, allow_unicode=True, sort_keys=False)
-    with v2rayPath.open('w') as v2rayStreamI:
-        json.dump(v2ray, v2rayStreamI, indent=4)
+    with configPath.open('w') as configStream1:
+        yaml.safe_dump(config, configStream1, indent=4, allow_unicode=True, sort_keys=False)
+    with v2rayPath.open('w') as v2rayStream1:
+        json.dump(v2ray, v2rayStream1, indent=4)
 
 
 def generateAndRestartAndExit():
     saveConfig()
+    v2rayPathResolved = v2rayPath.resolve()
     if config['useSudo']:
         os.system('sudo whoami')
         os.system('sudo killall v2ray > /dev/null 2>&1')
         if config['runInFront']:
-            os.system('sudo v2ray -config {}'.format(v2rayPath.resolve()))
+            os.system('sudo v2ray -config {}'.format(v2rayPathResolved))
         else:
-            os.system('nohup sudo v2ray -config {} > /dev/null 2>&1 &'.format(v2rayPath.resolve()))
+            os.system('nohup sudo v2ray -config {} > /dev/null 2>&1 &'.format(v2rayPathResolved))
     else:
         os.system('killall v2ray > /dev/null 2>&1')
         if config['runInFront']:
-            os.system('v2ray -config {}'.format(v2rayPath.resolve()))
+            os.system('v2ray -config {}'.format(v2rayPathResolved))
         else:
-            os.system('nohup v2ray -config {} > /dev/null 2>&1 &'.format(v2rayPath.resolve()))
+            os.system('nohup v2ray -config {} > /dev/null 2>&1 &'.format(v2rayPathResolved))
     exit()
 
 
 def updateSubscriptions(url):
     try:
         response = requests.get(url, timeout=20)
-        connectsM = b64decode(response.text).decode()
+        connects1 = b64decode(response.text).decode()
     except requests.exceptions.BaseHTTPError and UnicodeEncodeError as e:
         print(e)
         return
-    if 'vmess://' not in connectsM:
+    if 'vmess://' not in connects1:
         print('{} 返回空配置列表, 未更改'.format(url))
         return
-    config[url] = []
-    for connectM in connectsM.splitlines():
-        connectM = getConnect(connectM)
-        config[url].append(connectM)
+    subscriptions[url] = []
+    for connect4 in connects1.splitlines():
+        connect4 = getConnection(connect4)
+        subscriptions[url].append(connect4)
 
 
-def getConnect(string):
+def getConnection(string):
     return json.loads(b64decode(string.replace('vmess://', '')))
 
 
@@ -81,36 +90,36 @@ vmess = {}
 freedom = {}
 vmessIndex = 0
 freedomIndex = 0
-for indexI, outI in enumerate(outBounds):
-    outProtocol = outI['protocol']
+for index1, out1 in enumerate(outBounds):
+    outProtocol = out1['protocol']
     if outProtocol == 'vmess':
-        vmess = outI
-        vmessIndex = indexI
+        vmess = out1
+        vmessIndex = index1
     elif outProtocol == 'freedom':
-        freedom = outI
-        freedomIndex = indexI
+        freedom = out1
+        freedomIndex = index1
 gfwDomain = []
 gfwIp = []
 cnDomain = []
 cnIp = []
-for rule in v2ray['routing']['rules']:
-    outboundTag = rule['outboundTag']
+for rule2 in v2ray['routing']['rules']:
+    outboundTag = rule2['outboundTag']
     if outboundTag == vmess['tag']:
-        if 'domain' in rule:
-            gfwDomain = rule['domain']
-        elif 'ip' in rule:
-            gfwIp = rule['ip']
+        if 'domain' in rule2:
+            gfwDomain = rule2['domain']
+        elif 'ip' in rule2:
+            gfwIp = rule2['ip']
     elif outboundTag == freedom['tag']:
-        if 'domain' in rule:
-            cnDomain = rule['domain']
-        elif 'ip' in rule:
-            cnIp = rule['ip']
+        if 'domain' in rule2:
+            cnDomain = rule2['domain']
+        elif 'ip' in rule2:
+            cnIp = rule2['ip']
 dnsGfw = []
 dnsCn = []
 if 'dns' in v2ray and 'servers' in v2ray['dns']:
-    for serverNI in v2ray['dns']['servers']:
-        if type(serverNI) == dict:
-            dnsDomains = serverNI['domains']
+    for server1 in v2ray['dns']['servers']:
+        if type(server1) == dict:
+            dnsDomains = server1['domains']
             if 'geosite:google' in dnsDomains:
                 dnsGfw = dnsDomains
             elif 'geosite:cn' in dnsDomains:
@@ -166,67 +175,91 @@ def addAddr():
                 cnIp.append(addr)
 
 
-connects = []
+connections = []
 while True:
-    print('\n默认出站: \033[33m{}\033[0m\n要连接的配置: \033[33m{}\033[0m\n在前台运行 V2ray: \033[33m{}\033[0m\n'
+    print('默认出站: \033[33m{}\033[0m\n要连接的配置: \033[33m{}\033[0m\n在前台运行 V2ray: \033[33m{}\033[0m\n'
           '使用 sudo 运行 V2ray: \033[33m{}\033[0m\n'
           .format(outBounds[0]['protocol'], mainVnext['address'], config['runInFront'], config['useSudo']))
     inputStr = input('键入: vmess 连接配置, 或订阅地址, 或 u 以更新订阅, 或要连接的配置序号,\n'
                      '      或 "gfw google.com"/"cn 223.5.5.5" 向黑白名单列表添加域名或 IP,\n'
                      '      或 d 以切换默认出站, 或 f 以切换前台运行 V2ray, 或 s 以切换使用 sudo 运行 V2ray\n'
+                     '      或 r 以移除所有规则并备份或从备份中恢复, 或 a 以移除拦截广告的规则并备份或或从备份中恢复\n'
                      '      或 p 以查看配置列表, 或回车以保存配置并运行, 或 q 以保存配置并退出\n').strip()
+    print()
     if inputStr == '':
         generateAndRestartAndExit()
     elif inputStr == 'f':
-        config['runInFront'] = True if not config['runInFront'] else False
+        config['runInFront'] = not config['runInFront']
     elif inputStr == 's':
-        config['useSudo'] = True if not config['useSudo'] else False
-    elif inputStr == 'u':
-        for key, value in config.items():
-            if isUrl(key):
-                updateSubscriptions(key)
+        config['useSudo'] = not config['useSudo']
     elif inputStr == 'd':
         if outBounds[0]['protocol'] == 'vmess':
             outBounds[0], outBounds[freedomIndex] = outBounds[freedomIndex], outBounds[0]
         else:
             outBounds[0], outBounds[vmessIndex] = outBounds[vmessIndex], outBounds[0]
     elif inputStr == 'p':
-        connects = []
+        connections = []
         echo = []
-        if config is not None:
-            count = itertools.count(1)
-            for key, value in config.items():
-                if key == 'imported' or isUrl(key):
-                    echo.append('\033[32m{}\033[0m\n'.format(key))
-                    for connect in value:
-                        connects.append(connect)
-                        echo.append('\033[34m{}\033[0m\t{}\t\t{}\n'.format(next(count), connect['ps'], connect['add']))
+        count = itertools.count(1)
+        echo.append('\033[32m{}\033[0m\n'.format('imported'))
+        for connection1 in config['imported']:
+            connections.append(connection1)
+            echo.append('\033[34m{}\033[0m\t{}\t\t{}\n'.format(next(count), connection1['ps'], connection1['add']))
+        for url1, connections1 in subscriptions.items():
+            echo.append('\033[32m{}\033[0m\n'.format(url1))
+            for connection3 in connections1:
+                connections.append(connection3)
+                echo.append('\033[34m{}\033[0m\t{}\t\t{}\n'.format(next(count), connection3['ps'], connection3['add']))
         os.system('echo "{}" | less -r'.format(''.join(echo)))  # 我不知道怎么正确地通过两个 subprocess.PIPE 传递输入
+    elif inputStr == 'u':
+        for url4, connection4 in subscriptions:
+            updateSubscriptions(url4)
+    elif inputStr == 'r':
+        if v2ray['routing']['rules']:
+            config['config']['routing']['rules'] = v2ray['routing']['rules']
+            v2ray['routing']['rules'] = []
+        else:
+            v2ray['routing']['rules'] = config['config']['routing']['rules']
+    elif inputStr == 'a':
+        if not v2ray['routing']['rules']:
+            continue
+        ok1 = False
+        ruleIndex2 = -1
+        for ruleIndex1, rule1 in enumerate(v2ray['routing']['rules']):
+            if 'domain' in rule1 and 'geosite:category-ads-all' in rule1['domain']:
+                ok1 = True
+                ruleIndex2 = ruleIndex1
+                break
+        if ok1:
+            config['config']['routing']['_category-ads-all'] = v2ray['routing']['rules'][ruleIndex2]
+            v2ray['routing']['rules'].pop(ruleIndex2)
+        else:
+            v2ray['routing']['rules'].append(config['config']['routing']['_category-ads-all'])
     elif inputStr == 'q':
         saveConfig()
         exit()
     elif inputStr.isdigit():
         # 要连接的配置序号
-        connectII = connects[int(inputStr) - 1]
-        mainVnext['address'] = connectII['add']
-        mainVnext['port'] = int(connectII['port'])
-        mainUser['id'] = connectII['id']
-        mainUser['alterId'] = int(connectII['aid'])
-        streamSettings['network'] = connectII['net']
-        streamSettings['security'] = connectII['tls']
-        streamSettings['tcpSettings']['header']['type'] = connectII['type']
-        streamSettings['kcpSettings']['header']['type'] = connectII['type']
-        streamSettings['quicSettings']['header']['type'] = connectII['type']
-        wsSettings['headers']['Host'] = connectII['host']
-        wsSettings['path'] = connectII['path']
+        connection2 = connections[int(inputStr) - 1]
+        mainVnext['address'] = connection2['add']
+        mainVnext['port'] = int(connection2['port'])
+        mainUser['id'] = connection2['id']
+        mainUser['alterId'] = int(connection2['aid'])
+        streamSettings['network'] = connection2['net']
+        streamSettings['security'] = connection2['tls']
+        streamSettings['tcpSettings']['header']['type'] = connection2['type']
+        streamSettings['kcpSettings']['header']['type'] = connection2['type']
+        streamSettings['quicSettings']['header']['type'] = connection2['type']
+        wsSettings['headers']['Host'] = connection2['host']
+        wsSettings['path'] = connection2['path']
     elif inputStr.startswith('vmess://'):
         # 连接配置
-        connectsI = re.split(r'\n|\\n', inputStr)
-        for connectI in connectsI:
-            if 'vmess://' not in connectI:
+        connections2 = re.split(r'\n|\\n', inputStr)
+        for connection5 in connections2:
+            if 'vmess://' not in connection5:
                 continue
-            connectI = getConnect(connectI)
-            config['imported'].append(connectI)
+            connection5 = getConnection(connection5)
+            config['imported'].append(connection5)
     elif ' ' in inputStr:
         # 向列表添加域名或 IP
         addAddr()
