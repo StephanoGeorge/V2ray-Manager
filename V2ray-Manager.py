@@ -166,23 +166,15 @@ def addAddr():
                 cnIp.append(addr)
 
 
+connects = []
 while True:
-    connects = []
-    if config is not None:
-        count = itertools.count(1)
-        for key, value in config.items():
-            if key == 'imported' or isUrl(key):
-                print('\033[32m{}\033[0m'.format(key))
-                for connect in value:
-                    connects.append(connect)
-                    print('\033[34m{}\033[0m\t{}\t\t{}'.format(next(count), connect['ps'], connect['add']))
-    print('默认出站: \033[33m{}\033[0m\n要连接的配置: \033[33m{}\033[0m\n在前台运行 V2ray: \033[33m{}\033[0m\n'
+    print('\n默认出站: \033[33m{}\033[0m\n要连接的配置: \033[33m{}\033[0m\n在前台运行 V2ray: \033[33m{}\033[0m\n'
           '使用 sudo 运行 V2ray: \033[33m{}\033[0m\n'
           .format(outBounds[0]['protocol'], mainVnext['address'], config['runInFront'], config['useSudo']))
     inputStr = input('键入: vmess 连接配置, 或订阅地址, 或 u 以更新订阅, 或要连接的配置序号,\n'
                      '      或 "gfw google.com"/"cn 223.5.5.5" 向黑白名单列表添加域名或 IP,\n'
                      '      或 d 以切换默认出站, 或 f 以切换前台运行 V2ray, 或 s 以切换使用 sudo 运行 V2ray\n'
-                     '      或回车以保存配置并运行, 或 q 以保存配置并退出\n').strip()
+                     '      或 p 以查看配置列表, 或回车以保存配置并运行, 或 q 以保存配置并退出\n').strip()
     if inputStr == '':
         generateAndRestartAndExit()
     elif inputStr == 'f':
@@ -198,6 +190,18 @@ while True:
             outBounds[0], outBounds[freedomIndex] = outBounds[freedomIndex], outBounds[0]
         else:
             outBounds[0], outBounds[vmessIndex] = outBounds[vmessIndex], outBounds[0]
+    elif inputStr == 'p':
+        connects = []
+        echo = []
+        if config is not None:
+            count = itertools.count(1)
+            for key, value in config.items():
+                if key == 'imported' or isUrl(key):
+                    echo.append('\033[32m{}\033[0m\n'.format(key))
+                    for connect in value:
+                        connects.append(connect)
+                        echo.append('\033[34m{}\033[0m\t{}\t\t{}\n'.format(next(count), connect['ps'], connect['add']))
+        os.system('echo "{}" | less -r'.format(''.join(echo)))  # 我不知道怎么正确地通过两个 subprocess.PIPE 传递输入
     elif inputStr == 'q':
         saveConfig()
         exit()
