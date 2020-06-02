@@ -181,15 +181,21 @@ def addAddr():
 
 
 connections = []
+first = True
 while True:
-    print('默认出站: \033[33m{}\033[0m\n要连接的配置: \033[33m{}\033[0m\n在前台运行 V2ray: \033[33m{}\033[0m\n'
-          '使用 sudo 运行 V2ray: \033[33m{}\033[0m\n'
+    if first:
+        first = False
+        print('键入: vmess 连接配置, 或订阅地址, 或 u 以更新订阅, 或要连接的配置序号,\n'
+              '      或 "gfw google.com"/"cn 223.5.5.5" 向黑白名单列表添加域名或 IP,\n'
+              '      或 d 以切换默认出站, 或 f 以切换前台运行 V2ray, 或 s 以切换使用 sudo 运行 V2ray\n'
+              '      或 r 以移除所有规则并备份或从备份中恢复, 或 a 以移除拦截广告的规则并备份或或从备份中恢复\n'
+              '      或 p 以查看配置列表, 或回车以保存配置并运行, 或 q 以保存配置并退出\n')
+    print('默认出站: \33[33m{}\33[0m\n'
+          '要连接的配置: \33[33m{}\33[0m\n'
+          '在前台运行 V2ray: \33[33m{}\33[0m\n'
+          '使用 sudo 运行 V2ray: \33[33m{}\33[0m'
           .format(outBounds[0]['protocol'], mainVnext['address'], config['runInFront'], config['useSudo']))
-    inputStr = input('键入: vmess 连接配置, 或订阅地址, 或 u 以更新订阅, 或要连接的配置序号,\n'
-                     '      或 "gfw google.com"/"cn 223.5.5.5" 向黑白名单列表添加域名或 IP,\n'
-                     '      或 d 以切换默认出站, 或 f 以切换前台运行 V2ray, 或 s 以切换使用 sudo 运行 V2ray\n'
-                     '      或 r 以移除所有规则并备份或从备份中恢复, 或 a 以移除拦截广告的规则并备份或或从备份中恢复\n'
-                     '      或 p 以查看配置列表, 或回车以保存配置并运行, 或 q 以保存配置并退出\n').strip()
+    inputStr = input().strip()
     print()
     if inputStr == '':
         generateAndRestartAndExit()
