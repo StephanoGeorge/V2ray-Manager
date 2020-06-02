@@ -17,7 +17,7 @@ v2rayPath = path / 'V2ray-Config.json'
 configPath.touch()
 with configPath.open() as configStream:
     config = yaml.safe_load(configStream)
-if config is None:
+if not config:
     config = {'runInFront': False, 'useSudo': False, 'imported': [], 'subscriptions': {},
               'config': {
                   'routing': {
@@ -62,7 +62,7 @@ def updateSubscriptions(url):
     try:
         response = requests.get(url, timeout=20)
         connects1 = b64decode(response.text).decode()
-    except requests.exceptions.BaseHTTPError and UnicodeEncodeError as e:
+    except Exception as e:
         print(e)
         return
     if 'vmess://' not in connects1:
@@ -70,12 +70,17 @@ def updateSubscriptions(url):
         return
     subscriptions[url] = []
     for connect4 in connects1.splitlines():
+        if not connect4:
+            continue
         connect4 = getConnection(connect4)
         subscriptions[url].append(connect4)
 
 
 def getConnection(string):
-    return json.loads(b64decode(string.replace('vmess://', '')))
+    try:
+        return json.loads(b64decode(string.replace('vmess://', '')))
+    except Exception as e:
+        print(e)
 
 
 def isUrl(string):
@@ -136,7 +141,7 @@ def addAddr():
     else:
         target = 'cn'
     addr = inputStr.replace('{} '.format(target), '')
-    if re.search(r' [0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', inputStr) is None:
+    if not re.search(r' [0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', inputStr):
         if isUrl(addr):
             addr = removeSchema(addr)
         domainItem = 'domain:{}'.format(addr)
