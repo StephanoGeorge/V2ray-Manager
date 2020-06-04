@@ -223,7 +223,7 @@ while True:
                 echo.append('\033[34m{}\033[0m\t{}\t\t{}\n'.format(next(count), connection3['ps'], connection3['add']))
         os.system('echo "{}" | less -r'.format(''.join(echo)))  # 我不知道怎么正确地通过两个 subprocess.PIPE 传递输入
     elif inputStr == 'u':
-        for url4, connection4 in subscriptions:
+        for url4, connection4 in subscriptions.items():
             updateSubscriptions(url4)
     elif inputStr == 'r':
         if v2ray['routing']['rules']:
