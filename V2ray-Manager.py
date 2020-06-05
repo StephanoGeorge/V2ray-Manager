@@ -34,28 +34,33 @@ imported = config['imported']
 outBounds = v2ray['outbounds']
 
 
-def sortConnectionKeys(connection6):
-    if 'sorted' in connection6:
+def sortConnectionKeys(connection):
+    if 'sorted' in connection:
         connection6 = {
-            'ps': connection6['ps'],
-            'add': connection6['add'],
-            'port': connection6['port'],
-            'id': connection6['id'],
-            'aid': connection6['aid'],
-            'net': connection6['net'],
-            'type': connection6['type'],
-            'host': connection6['host'],
-            'path': connection6['path'],
-            'tls': connection6['tls'],
+            'ps': connection['ps'],
+            'add': connection['add'],
+            'port': connection['port'],
+            'id': connection['id'],
+            'aid': connection['aid'],
+            'net': connection['net'],
+            'type': connection['type'],
         }
+        if 'host' in connection:
+            connection6['host'] = connection['host']
+        if 'path' in connection:
+            connection6['path'] = connection['path']
+        if 'tls' in connection:
+            connection6['tls'] = connection['tls']
+        return connection6
+    return connection
 
 
 def saveConfig():
-    for connection6 in imported:
-        sortConnectionKeys(connection6)
+    for i1, connection6 in enumerate(imported):
+        imported[i1] = sortConnectionKeys(connection6)
     for url2 in subscriptions.keys():
-        for connection7 in subscriptions[url2]:
-            sortConnectionKeys(connection7)
+        for i2, connection7 in enumerate(subscriptions[url2]):
+            subscriptions[url2][i2] = sortConnectionKeys(connection7)
     with configPath.open('w') as configStream1:
         yaml.safe_dump(config, configStream1, indent=4, allow_unicode=True, sort_keys=False)
     with v2rayPath.open('w') as v2rayStream1:
@@ -283,12 +288,12 @@ while True:
         mainUser['id'] = connection2['id']
         mainUser['alterId'] = int(connection2['aid'])
         streamSettings['network'] = connection2['net']
-        streamSettings['security'] = connection2['tls']
         streamSettings['tcpSettings']['header']['type'] = connection2['type']
         streamSettings['kcpSettings']['header']['type'] = connection2['type']
         streamSettings['quicSettings']['header']['type'] = connection2['type']
-        wsSettings['headers']['Host'] = connection2['host']
-        wsSettings['path'] = connection2['path']
+        wsSettings['headers']['Host'] = connection2['host'] if 'host' in connection2 else ''
+        wsSettings['path'] = connection2['path'] if 'path' in connection2 else ''
+        streamSettings['security'] = connection2['tls'] if 'tls' in connection2 else ''
     elif inputStr.startswith('vmess://'):
         # 连接配置
         connections2 = re.split(r'\n|\\n', inputStr)
