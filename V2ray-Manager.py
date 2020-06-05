@@ -30,6 +30,7 @@ with v2rayPath.open() as v2rayStream:
     v2ray = json.load(v2rayStream)
 
 subscriptions = config['subscriptions']
+imported = config['imported']
 outBounds = v2ray['outbounds']
 
 
@@ -50,7 +51,7 @@ def sortConnectionKeys(connection6):
 
 
 def saveConfig():
-    for connection6 in config['imported']:
+    for connection6 in imported:
         sortConnectionKeys(connection6)
     for url2 in subscriptions.keys():
         for connection7 in subscriptions[url2]:
@@ -83,19 +84,19 @@ def generateAndRestartAndExit():
 def updateSubscriptions(url):
     try:
         response = requests.get(url, timeout=20)
-        connects1 = b64decode(response.text).decode()
+        connections3 = b64decode(response.text).decode()
     except Exception as e:
         print(e)
         return
-    if 'vmess://' not in connects1:
+    if 'vmess://' not in connections3:
         print('{} 返回空配置列表, 未更改'.format(url))
         return
     subscriptions[url] = []
-    for connect4 in connects1.splitlines():
-        if not connect4:
+    for connection6 in connections3.splitlines():
+        if not connection6:
             continue
-        connect4 = getConnection(connect4)
-        subscriptions[url].append(connect4)
+        connection6 = getConnection(connection6)
+        subscriptions[url].append(connection6)
 
 
 def getConnection(string):
@@ -238,7 +239,7 @@ while True:
         echo = []
         count = itertools.count(1)
         echo.append('\033[32m{}\033[0m\n'.format('imported'))
-        for connection1 in config['imported']:
+        for connection1 in imported:
             connections.append(connection1)
             echo.append('\033[34m{}\033[0m\t{}\t\t{}\n'.format(next(count), connection1['ps'], connection1['add']))
         for url1, connections1 in subscriptions.items():
@@ -295,7 +296,7 @@ while True:
             if 'vmess://' not in connection5:
                 continue
             connection5 = getConnection(connection5)
-            config['imported'].append(connection5)
+            imported.append(connection5)
     elif ' ' in inputStr:
         # 向列表添加域名或 IP
         addAddr()
