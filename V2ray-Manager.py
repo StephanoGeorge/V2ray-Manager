@@ -215,14 +215,14 @@ while True:
               '      或 "gfw google.com"/"cn 223.5.5.5" 向黑白名单列表添加域名或 IP,\n'
               '      或 d 以切换默认出站, 或 f 以切换前台运行 V2ray, 或 s 以切换使用 sudo 运行 V2ray\n'
               '      或 r 以移除所有规则并备份或从备份中恢复, 或 a 以移除拦截广告的规则并备份或或从备份中恢复\n'
-              '      或 p 以查看配置列表, 或回车以保存配置并运行, 或 q 以保存配置并退出\n')
+              '      或 p 以查看配置列表, 或回车以保存配置并运行, 或 q 以保存配置并退出')
+    print()
     print('默认出站: \33[33m{}\33[0m\n'
           '要连接的配置: \33[33m{}\33[0m\n'
           '在前台运行 V2ray: \33[33m{}\33[0m\n'
           '使用 sudo 运行 V2ray: \33[33m{}\33[0m'
           .format(outBounds[0]['protocol'], mainVnext['address'], config['runInFront'], config['useSudo']))
     inputStr = input().strip()
-    print()
     if inputStr == '':
         generateAndRestartAndExit()
     elif inputStr == 'f':
