@@ -33,7 +33,28 @@ subscriptions = config['subscriptions']
 outBounds = v2ray['outbounds']
 
 
+def sortConnectionKeys(connection6):
+    if 'sorted' in connection6:
+        connection6 = {
+            'ps': connection6['ps'],
+            'add': connection6['add'],
+            'port': connection6['port'],
+            'id': connection6['id'],
+            'aid': connection6['aid'],
+            'net': connection6['net'],
+            'type': connection6['type'],
+            'host': connection6['host'],
+            'path': connection6['path'],
+            'tls': connection6['tls'],
+        }
+
+
 def saveConfig():
+    for connection6 in config['imported']:
+        sortConnectionKeys(connection6)
+    for url2 in subscriptions.keys():
+        for connection7 in subscriptions[url2]:
+            sortConnectionKeys(connection7)
     with configPath.open('w') as configStream1:
         yaml.safe_dump(config, configStream1, indent=4, allow_unicode=True, sort_keys=False)
     with v2rayPath.open('w') as v2rayStream1:
@@ -79,7 +100,10 @@ def updateSubscriptions(url):
 
 def getConnection(string):
     try:
-        return json.loads(b64decode(string.replace('vmess://', '')))
+        return {
+            'sorted': False,
+            **json.loads(b64decode(string.replace('vmess://', '')))
+        }
     except Exception as e:
         print(e)
 
