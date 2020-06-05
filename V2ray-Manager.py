@@ -101,17 +101,24 @@ def updateSubscriptions(url):
         if not connection6:
             continue
         connection6 = getConnection(connection6)
+        if not connection6:
+            continue
         subscriptions[url].append(connection6)
 
 
 def getConnection(string):
     try:
+        connection = json.loads(b64decode(string.replace('vmess://', '')))
+        if connection['v'] != '2':
+            print('不支持 version {}'.format(connection['v']))
+            return
         return {
             'sorted': False,
-            **json.loads(b64decode(string.replace('vmess://', '')))
+            **connection,
         }
     except Exception as e:
         print(e)
+        return
 
 
 def isUrl(string):
@@ -301,6 +308,8 @@ while True:
             if 'vmess://' not in connection5:
                 continue
             connection5 = getConnection(connection5)
+            if not connection5:
+                continue
             imported.append(connection5)
     elif ' ' in inputStr:
         # 向列表添加域名或 IP
