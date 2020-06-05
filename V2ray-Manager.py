@@ -10,10 +10,11 @@ from pathlib import Path
 import requests
 import yaml
 
-path = Path(__file__).resolve().parent
+path = Path.home() / '.config/V2ray-Manager-Denis'
 configPath = path / 'Config.yaml'
 v2rayPath = path / 'V2ray-Config.json'
 
+path.mkdir(parents=True, exist_ok=True)
 configPath.touch()
 with configPath.open() as configStream:
     config = yaml.safe_load(configStream)
