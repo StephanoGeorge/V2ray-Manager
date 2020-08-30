@@ -87,6 +87,7 @@ def generateAndRestartAndExit():
 
 
 def updateSubscriptions(url):
+    print(f'正在获取 {url}')
     try:
         response = requests.get(url, timeout=20)
         connections3 = b64decode(response.text).decode()
@@ -94,7 +95,7 @@ def updateSubscriptions(url):
         print(e)
         return
     if 'vmess://' not in connections3:
-        print('{} 返回空配置列表, 未更改'.format(url))
+        print('返回空配置列表, 未更改')
         return
     subscriptions[url] = []
     for connection6 in connections3.splitlines():
