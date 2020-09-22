@@ -19,7 +19,7 @@ configPath.touch()
 with configPath.open() as configStream:
     config = yaml.safe_load(configStream)
 if not config:
-    config = {'runInFront': False, 'useSudo': False, 'imported': [], 'subscriptions': {},
+    config = {'run-in-front': False, 'use-sudo': False, 'imported': [], 'subscriptions': {},
               'config': {
                   'routing': {
                       'rules': [],
@@ -70,16 +70,16 @@ def saveConfig():
 def generateAndRestartAndExit():
     saveConfig()
     v2rayPathResolved = v2rayPath.resolve()
-    if config['useSudo']:
+    if config['use-sudo']:
         os.system('sudo whoami')
         os.system('sudo killall v2ray > /dev/null 2>&1')
-        if config['runInFront']:
+        if config['run-in-front']:
             os.system('sudo v2ray -config {}'.format(v2rayPathResolved))
         else:
             os.system('nohup sudo v2ray -config {} > /dev/null 2>&1 &'.format(v2rayPathResolved))
     else:
         os.system('killall v2ray > /dev/null 2>&1')
-        if config['runInFront']:
+        if config['run-in-front']:
             os.system('v2ray -config {}'.format(v2rayPathResolved))
         else:
             os.system('nohup v2ray -config {} > /dev/null 2>&1 &'.format(v2rayPathResolved))
@@ -238,14 +238,14 @@ while True:
           '要连接的配置: \33[33m{}\33[0m\n'
           '在前台运行 V2ray: \33[33m{}\33[0m\n'
           '使用 sudo 运行 V2ray: \33[33m{}\33[0m'
-          .format(outBounds[0]['protocol'], mainVnext['address'], config['runInFront'], config['useSudo']))
+          .format(outBounds[0]['protocol'], mainVnext['address'], config['run-in-front'], config['use-sudo']))
     inputStr = input().strip()
     if inputStr == '':
         generateAndRestartAndExit()
     elif inputStr == 'f':
-        config['runInFront'] = not config['runInFront']
+        config['run-in-front'] = not config['run-in-front']
     elif inputStr == 's':
-        config['useSudo'] = not config['useSudo']
+        config['use-sudo'] = not config['use-sudo']
     elif inputStr == 'd':
         if outBounds[0]['protocol'] == 'vmess':
             outBounds[0], outBounds[freedomIndex] = outBounds[freedomIndex], outBounds[0]
