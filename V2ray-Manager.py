@@ -22,6 +22,7 @@ if not config:
     config = {
         'run-in-front': False,
         'use-sudo': False,
+        'v2ray-command': 'v2ray',
         'current-connection': None,
         'imported': [],
         'subscriptions': {},
@@ -75,20 +76,19 @@ def saveConfig():
 
 def generateAndRestartAndExit():
     saveConfig()
-    v2rayPathResolved = v2rayPath.resolve()
     if config['use-sudo']:
         os.system('sudo whoami')
         os.system('sudo killall v2ray > /dev/null 2>&1')
         if config['run-in-front']:
-            os.system('sudo v2ray -config {}'.format(v2rayPathResolved))
+            os.system(f"sudo {config['v2ray-command']} -config {v2rayPath.resolve()}")
         else:
-            os.system('nohup sudo v2ray -config {} > /dev/null 2>&1 &'.format(v2rayPathResolved))
+            os.system(f"nohup sudo {config['v2ray-command']} -config {v2rayPath.resolve()} > /dev/null 2>&1 &")
     else:
         os.system('killall v2ray > /dev/null 2>&1')
         if config['run-in-front']:
-            os.system('v2ray -config {}'.format(v2rayPathResolved))
+            os.system(f"{config['v2ray-command']} -config {v2rayPath.resolve()}")
         else:
-            os.system('nohup v2ray -config {} > /dev/null 2>&1 &'.format(v2rayPathResolved))
+            os.system(f"nohup {config['v2ray-command']} -config {v2rayPath.resolve()} > /dev/null 2>&1 &")
     exit()
 
 
@@ -191,6 +191,8 @@ def addAddressFromInputStr():
 
 def addAddress(address, target, rules):
     if re.search(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', address):
+        if not rules:
+            return
         if target == 'gfw':
             if address in gfwIp:
                 print('{} 已经存在于 GFW IPs'.format(address))
