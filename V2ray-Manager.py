@@ -225,6 +225,30 @@ def addAddress(address, target):
 
 connections = []
 first = True
+
+
+def updateConnections(doPrint=False):
+    global connections
+    connections = []
+    echo = []
+    count = itertools.count(1)
+    if doPrint:
+        echo.append('\033[32m{}\033[0m\n'.format('imported'))
+    for connection1 in imported:
+        connections.append(connection1)
+        if doPrint:
+            echo.append('\033[34m{}\033[0m\t{}\t\t{}\n'.format(next(count), connection1['ps'], connection1['add']))
+    for url1, connections1 in subscriptions.items():
+        if doPrint:
+            echo.append('\033[32m{}\033[0m\n'.format(url1))
+        for connection3 in connections1:
+            connections.append(connection3)
+            if doPrint:
+                echo.append('\033[34m{}\033[0m\t{}\t\t{}\n'.format(next(count), connection3['ps'], connection3['add']))
+    if doPrint:
+        os.system('echo "{}" | less -r'.format(''.join(echo)))  # 我不知道怎么正确地通过两个 subprocess.PIPE 传递输入
+
+
 while True:
     if first:
         first = False
@@ -252,19 +276,7 @@ while True:
         else:
             outBounds[0], outBounds[vmessIndex] = outBounds[vmessIndex], outBounds[0]
     elif inputStr == 'p':
-        connections = []
-        echo = []
-        count = itertools.count(1)
-        echo.append('\033[32m{}\033[0m\n'.format('imported'))
-        for connection1 in imported:
-            connections.append(connection1)
-            echo.append('\033[34m{}\033[0m\t{}\t\t{}\n'.format(next(count), connection1['ps'], connection1['add']))
-        for url1, connections1 in subscriptions.items():
-            echo.append('\033[32m{}\033[0m\n'.format(url1))
-            for connection3 in connections1:
-                connections.append(connection3)
-                echo.append('\033[34m{}\033[0m\t{}\t\t{}\n'.format(next(count), connection3['ps'], connection3['add']))
-        os.system('echo "{}" | less -r'.format(''.join(echo)))  # 我不知道怎么正确地通过两个 subprocess.PIPE 传递输入
+        updateConnections(True)
     elif inputStr == 'u':
         for url4, connection4 in subscriptions.items():
             updateSubscriptions(url4)
@@ -293,6 +305,8 @@ while True:
         saveConfig()
         exit()
     elif inputStr.isdigit():
+        if not connections:
+            updateConnections()
         # 要连接的配置序号
         connection2 = connections[int(inputStr) - 1]
         mainVnext['address'] = connection2['add']
