@@ -174,16 +174,20 @@ streamSettings = vmess['streamSettings']
 wsSettings = streamSettings['wsSettings']
 
 
-def addAddr():
+def addAddressFromInputStr():
     if inputStr.startswith('gfw'):
         target = 'gfw'
     else:
         target = 'cn'
-    addr = inputStr.replace('{} '.format(target), '')
-    if not re.search(r' [0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', inputStr):
-        if isUrl(addr):
-            addr = removeSchema(addr)
-        domainItem = 'domain:{}'.format(addr)
+    address = inputStr.replace('{} '.format(target), '')
+    addAddress(address, target)
+
+
+def addAddress(address, target):
+    if not re.search(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', address):
+        if isUrl(address):
+            address = removeSchema(address)
+        domainItem = 'domain:{}'.format(address)
         if target == 'gfw':
             if gfwDomain:
                 if domainItem in gfwDomain:
@@ -208,15 +212,15 @@ def addAddr():
                     dnsCn.append(domainItem)
     else:
         if target == 'gfw':
-            if addr in gfwIp:
-                print('{} 已经存在于 GFW IPs'.format(addr))
+            if address in gfwIp:
+                print('{} 已经存在于 GFW IPs'.format(address))
             else:
-                gfwIp.append(addr)
+                gfwIp.append(address)
         else:
-            if addr in cnIp:
-                print('{} 已经存在于 CN IPs'.format(addr))
+            if address in cnIp:
+                print('{} 已经存在于 CN IPs'.format(address))
             else:
-                cnIp.append(addr)
+                cnIp.append(address)
 
 
 connections = []
@@ -302,6 +306,7 @@ while True:
         wsSettings['headers']['Host'] = connection2['host'] if 'host' in connection2 else ''
         wsSettings['path'] = connection2['path'] if 'path' in connection2 else ''
         streamSettings['security'] = connection2['tls'] if 'tls' in connection2 else ''
+        addAddress(mainVnext['address'], 'cn')
     elif inputStr.startswith('vmess://'):
         # 连接配置
         connections2 = re.split(r'\n|\\n', inputStr)
@@ -314,7 +319,7 @@ while True:
             imported.append(connection5)
     elif ' ' in inputStr:
         # 向列表添加域名或 IP
-        addAddr()
+        addAddressFromInputStr()
     else:
         # 订阅地址
         if not isUrl(inputStr):
