@@ -185,23 +185,23 @@ def addAddr():
             addr = removeSchema(addr)
         domainItem = 'domain:{}'.format(addr)
         if target == 'gfw':
-            if len(gfwDomain) != 0:
+            if gfwDomain:
                 if domainItem in gfwDomain:
                     print('{} 已经存在于 GFW domains'.format(domainItem))
                 else:
                     gfwDomain.append(domainItem)
-            if len(dnsGfw) != 0:
+            if dnsGfw:
                 if domainItem in dnsGfw:
                     print('{} 已经存在于 GFW DNS domains'.format(domainItem))
                 else:
                     dnsGfw.append(domainItem)
         else:
-            if len(cnDomain) != 0:
+            if cnDomain:
                 if domainItem in cnDomain:
                     print('{} 已经存在于 CN domains'.format(domainItem))
                 else:
                     cnDomain.append(domainItem)
-            if len(dnsCn) != 0:
+            if dnsCn:
                 if domainItem in dnsCn:
                     print('{} 已经存在于 CN DNS domains'.format(domainItem))
                 else:
