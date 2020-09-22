@@ -19,13 +19,19 @@ configPath.touch()
 with configPath.open() as configStream:
     config = yaml.safe_load(configStream)
 if not config:
-    config = {'run-in-front': False, 'use-sudo': False, 'imported': [], 'subscriptions': {},
-              'config': {
-                  'routing': {
-                      'rules': [],
-                      '_category-ads-all': {}
-                  }
-              }}
+    config = {
+        'run-in-front': False,
+        'use-sudo': False,
+        'current-connection': None,
+        'imported': [],
+        'subscriptions': {},
+        'config': {
+            'routing': {
+                'rules': [],
+                '_category-ads-all': {}
+            }
+        },
+    }
 with v2rayPath.open() as v2rayStream:
     v2ray = json.load(v2rayStream)
 
@@ -257,12 +263,13 @@ while True:
               '      或 d 以切换默认出站, 或 f 以切换前台运行 V2ray, 或 s 以切换使用 sudo 运行 V2ray\n'
               '      或 r 以移除所有规则并备份或从备份中恢复, 或 a 以移除拦截广告的规则并备份或或从备份中恢复\n'
               '      或 p 以查看配置列表, 或回车以保存配置并运行, 或 q 以保存配置并退出')
-    print()
-    print('默认出站: \33[33m{}\33[0m\n'
-          '要连接的配置: \33[33m{}\33[0m\n'
-          '在前台运行 V2ray: \33[33m{}\33[0m\n'
-          '使用 sudo 运行 V2ray: \33[33m{}\33[0m'
-          .format(outBounds[0]['protocol'], mainVnext['address'], config['run-in-front'], config['use-sudo']))
+    print(f"\n默认出站: \33[33m{outBounds[0]['protocol']}\33[0m\n" +
+          "要连接的配置: \33[33m{}\33[0m\n".format(
+              f"{config['current-connection']['ps']}: {config['current-connection']['add']}"
+              if config['current-connection'] else ''
+          ) +
+          f"在前台运行 V2ray: \33[33m{config['run-in-front']}\33[0m\n"
+          f"使用 sudo 运行 V2ray: \33[33m{config['use-sudo']}\33[0m")
     inputStr = input().strip()
     if inputStr == '':
         generateAndRestartAndExit()
@@ -320,7 +327,14 @@ while True:
         wsSettings['headers']['Host'] = connection2['host'] if 'host' in connection2 else ''
         wsSettings['path'] = connection2['path'] if 'path' in connection2 else ''
         streamSettings['security'] = connection2['tls'] if 'tls' in connection2 else ''
+        if config['current-connection']:
+            if 'dns' in v2ray and 'servers' in v2ray['dns']:
+                for server2 in v2ray['dns']['servers']:
+                    if type(server2) == dict and 'domains' in server2:
+                        server2['domains'] = [domain2 for domain2 in server2['domains']
+                                              if domain2 != f"domain:{config['current-connection']['add']}"]
         addAddress(mainVnext['address'], 'cn')
+        config['current-connection'] = connection2
     elif inputStr.startswith('vmess://'):
         # 连接配置
         connections2 = re.split(r'\n|\\n', inputStr)
