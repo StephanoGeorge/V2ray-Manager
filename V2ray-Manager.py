@@ -186,37 +186,11 @@ def addAddressFromInputStr():
     else:
         target = 'cn'
     address = inputStr.replace('{} '.format(target), '')
-    addAddress(address, target)
+    addAddress(address, target, True)
 
 
-def addAddress(address, target):
-    if not re.search(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', address):
-        if isUrl(address):
-            address = removeSchema(address)
-        domainItem = 'domain:{}'.format(address)
-        if target == 'gfw':
-            if gfwDomain:
-                if domainItem in gfwDomain:
-                    print('{} 已经存在于 GFW domains'.format(domainItem))
-                else:
-                    gfwDomain.append(domainItem)
-            if dnsGfw:
-                if domainItem in dnsGfw:
-                    print('{} 已经存在于 GFW DNS domains'.format(domainItem))
-                else:
-                    dnsGfw.append(domainItem)
-        else:
-            if cnDomain:
-                if domainItem in cnDomain:
-                    print('{} 已经存在于 CN domains'.format(domainItem))
-                else:
-                    cnDomain.append(domainItem)
-            if dnsCn:
-                if domainItem in dnsCn:
-                    print('{} 已经存在于 CN DNS domains'.format(domainItem))
-                else:
-                    dnsCn.append(domainItem)
-    else:
+def addAddress(address, target, rules):
+    if re.search(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', address):
         if target == 'gfw':
             if address in gfwIp:
                 print('{} 已经存在于 GFW IPs'.format(address))
@@ -227,6 +201,34 @@ def addAddress(address, target):
                 print('{} 已经存在于 CN IPs'.format(address))
             else:
                 cnIp.append(address)
+    else:
+        if isUrl(address):
+            address = removeSchema(address)
+        domainItem = 'domain:{}'.format(address)
+        if target == 'gfw':
+            if rules:
+                if gfwDomain:
+                    if domainItem in gfwDomain:
+                        print('{} 已经存在于 GFW domains'.format(domainItem))
+                    else:
+                        gfwDomain.append(domainItem)
+            if dnsGfw:
+                if domainItem in dnsGfw:
+                    print('{} 已经存在于 GFW DNS domains'.format(domainItem))
+                else:
+                    dnsGfw.append(domainItem)
+        else:
+            if rules:
+                if cnDomain:
+                    if domainItem in cnDomain:
+                        print('{} 已经存在于 CN domains'.format(domainItem))
+                    else:
+                        cnDomain.append(domainItem)
+            if dnsCn:
+                if domainItem in dnsCn:
+                    print('{} 已经存在于 CN DNS domains'.format(domainItem))
+                else:
+                    dnsCn.append(domainItem)
 
 
 connections = []
@@ -333,7 +335,7 @@ while True:
                     if type(server2) == dict and 'domains' in server2:
                         server2['domains'] = [domain2 for domain2 in server2['domains']
                                               if domain2 != f"domain:{config['current-connection']['add']}"]
-        addAddress(mainVnext['address'], 'cn')
+        addAddress(mainVnext['address'], 'cn', False)
         config['current-connection'] = connection2
     elif inputStr.startswith('vmess://'):
         # 连接配置
