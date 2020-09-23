@@ -6,6 +6,7 @@ import os
 import re
 from base64 import b64decode
 from pathlib import Path
+from threading import Thread
 
 import pyperclip
 import requests
@@ -135,7 +136,6 @@ def addImport(connection):
 
 
 def updateSubscriptions(url):
-    print(f'正在获取 {url}')
     for _ in range(3):
         try:
             response = requests.get(url, timeout=10)
@@ -145,7 +145,7 @@ def updateSubscriptions(url):
             print(e)
             continue
     else:
-        print('更新失败')
+        print(f'更新失败: {url}')
         return
     subscriptions1 = []
     for connection6 in connections3.splitlines():
@@ -154,8 +154,9 @@ def updateSubscriptions(url):
             subscriptions1.append(connection6)
     if subscriptions1:
         subscriptions[url] = subscriptions1
+        print(f'已更新: {url}')
     else:
-        print('返回空配置列表, 未更改')
+        print(f'返回空配置列表, 未更改: {url}')
 
 
 def addAddress(address, target, rules):
@@ -335,8 +336,13 @@ while True:
         for connection5 in connections2:
             addImport(connection5)
     elif inputStr == 'u':
+        threads1 = []
         for url4, connection4 in subscriptions.items():
-            updateSubscriptions(url4)
+            thread1 = Thread(target=updateSubscriptions, args=(url4,))
+            threads1.append(thread1)
+            thread1.start()
+        for thread2 in threads1:
+            thread2.join()
     elif inputStr == 'p':
         updateConnections(True)
     elif inputStr == 'q':
