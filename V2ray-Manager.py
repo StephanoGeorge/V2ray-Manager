@@ -89,14 +89,6 @@ mainUser = mainVnext['users'][0]
 streamSettings = vmess['streamSettings']
 
 
-def isStartsWithHttp(string):
-    return string.startswith('http')
-
-
-def removeHttpSchemaPrefix(string):
-    return re.sub(r'https?://', '', string)
-
-
 def updateConnections(doPrint=False):
     global connections
     connections = []
@@ -181,8 +173,8 @@ def addAddress(address, target, rules):
             else:
                 cnIp.append(address)
     else:
-        if isStartsWithHttp(address):
-            address = removeHttpSchemaPrefix(address)
+        if address.startswith('http'):
+            address = re.sub(r'https?://', '', address)
         domainItem = 'domain:{}'.format(address)
         if target == 'gfw':
             if rules:
@@ -388,6 +380,6 @@ while True:
         addAddressFromInputStr()
     else:
         # 订阅地址
-        if not isStartsWithHttp(inputStr):
+        if not inputStr.startswith('http'):
             inputStr = 'http://' + inputStr
         updateSubscriptions(inputStr)
