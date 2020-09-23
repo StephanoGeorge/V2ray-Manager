@@ -10,34 +10,6 @@
 
 将 V2Ray 配置文件重命名为 `V2Ray-Config.json`, 并置于 `~/.config/V2Ray-Manager/` 中.
 
-确保配置中的 `vmess` 出站包含以下形式的 `streamSettings`:
-
-```json
-"streamSettings": {
-    "network": "",
-    "kcpSettings": {
-        "header": {
-            "type": ""
-        }
-    },
-    "quicSettings": {
-        "header": {
-            "type": ""
-        }
-    },
-    "tcpSettings": {
-        "header": {
-            "type": ""
-        }
-    },
-    "wsSettings": {
-        "headers": {
-            "Host": ""
-        },
-        "path": ""
-    },
-```
-
 可选地, 向 PATH 中添加此脚本的符号链接:
 
 ```sh
