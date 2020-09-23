@@ -120,6 +120,8 @@ def updateConnections(doPrint=False):
 
 
 def getConnection(string):
+    if not string.startswith('vmess://'):
+        return None
     try:
         connection = json.loads(b64decode(string.replace('vmess://', '')))
         if connection['v'] != '2':
@@ -135,8 +137,6 @@ def getConnection(string):
 
 
 def addImport(connection):
-    if not connection.startswith('vmess://'):
-        return
     connection = getConnection(connection)
     if connection:
         imported.append(connection)
@@ -144,23 +144,26 @@ def addImport(connection):
 
 def updateSubscriptions(url):
     print(f'正在获取 {url}')
-    try:
-        response = requests.get(url, timeout=20)
-        connections3 = b64decode(response.text).decode()
-    except Exception as e:
-        print(e)
+    for _ in range(3):
+        try:
+            response = requests.get(url, timeout=10)
+            connections3 = b64decode(response.text).decode()
+            break
+        except Exception as e:
+            print(e)
+            continue
+    else:
+        print('更新失败')
         return
-    if 'vmess://' not in connections3:
-        print('返回空配置列表, 未更改')
-        return
-    subscriptions[url] = []
+    subscriptions1 = []
     for connection6 in connections3.splitlines():
-        if not connection6:
-            continue
         connection6 = getConnection(connection6)
-        if not connection6:
-            continue
-        subscriptions[url].append(connection6)
+        if connection6:
+            subscriptions1.append(connection6)
+    if subscriptions1:
+        subscriptions[url] = subscriptions1
+    else:
+        print('返回空配置列表, 未更改')
 
 
 def addAddress(address, target, rules):
