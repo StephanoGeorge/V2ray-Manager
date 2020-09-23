@@ -87,7 +87,6 @@ if 'dns' in v2ray and 'servers' in v2ray['dns']:
 mainVnext = vmess['settings']['vnext'][0]
 mainUser = mainVnext['users'][0]
 streamSettings = vmess['streamSettings']
-wsSettings = streamSettings['wsSettings']
 
 
 def isStartsWithHttp(string):
@@ -217,6 +216,45 @@ def addAddressFromInputStr():
     addAddress(address, target, True)
 
 
+def setConnection():
+    if not connections:
+        updateConnections()
+    connection2 = connections[int(inputStr) - 1]
+    mainVnext['address'] = connection2['add']
+    mainVnext['port'] = int(connection2['port'])
+    mainUser['id'] = connection2['id']
+    mainUser['alterId'] = int(connection2['aid'])
+    streamSettings['network'] = connection2['net']
+
+    def setHeader(prefix):
+        settings1 = f'{prefix}Settings'
+        if settings1 not in streamSettings:
+            streamSettings[settings1] = {'header': {}}
+        elif 'header' not in streamSettings[settings1]:
+            streamSettings[settings1]['header'] = {}
+        streamSettings[settings1]['header']['type'] = connection2['type']
+
+    if streamSettings['network'] == 'ws':
+        if 'wsSettings' not in streamSettings:
+            streamSettings['wsSettings'] = {'headers': {}}
+        elif 'headers' not in streamSettings['wsSettings']:
+            streamSettings['wsSettings']['headers'] = {}
+        streamSettings['wsSettings']['headers']['Host'] = connection2['host'] if 'host' in connection2 else ''
+        streamSettings['wsSettings']['path'] = connection2['path'] if 'path' in connection2 else ''
+    else:
+        # tcp, kcp, quic
+        setHeader(streamSettings['network'])
+    streamSettings['security'] = connection2['tls'] if 'tls' in connection2 else ''
+    if config['current-connection']:
+        if 'dns' in v2ray and 'servers' in v2ray['dns']:
+            for server2 in v2ray['dns']['servers']:
+                if type(server2) == dict and 'domains' in server2:
+                    server2['domains'] = [domain2 for domain2 in server2['domains']
+                                          if domain2 != f"domain:{config['current-connection']['add']}"]
+    addAddress(mainVnext['address'], 'cn', False)
+    config['current-connection'] = connection2
+
+
 def sortConnectionKeys(connection):
     if 'sorted' in connection:
         connection6 = {
@@ -339,29 +377,8 @@ while True:
         else:
             v2ray['routing']['rules'].append(config['config']['routing']['_category-ads-all'])
     elif inputStr.isdigit():
-        if not connections:
-            updateConnections()
-        # 要连接的配置序号
-        connection2 = connections[int(inputStr) - 1]
-        mainVnext['address'] = connection2['add']
-        mainVnext['port'] = int(connection2['port'])
-        mainUser['id'] = connection2['id']
-        mainUser['alterId'] = int(connection2['aid'])
-        streamSettings['network'] = connection2['net']
-        streamSettings['tcpSettings']['header']['type'] = connection2['type']
-        streamSettings['kcpSettings']['header']['type'] = connection2['type']
-        streamSettings['quicSettings']['header']['type'] = connection2['type']
-        wsSettings['headers']['Host'] = connection2['host'] if 'host' in connection2 else ''
-        wsSettings['path'] = connection2['path'] if 'path' in connection2 else ''
-        streamSettings['security'] = connection2['tls'] if 'tls' in connection2 else ''
-        if config['current-connection']:
-            if 'dns' in v2ray and 'servers' in v2ray['dns']:
-                for server2 in v2ray['dns']['servers']:
-                    if type(server2) == dict and 'domains' in server2:
-                        server2['domains'] = [domain2 for domain2 in server2['domains']
-                                              if domain2 != f"domain:{config['current-connection']['add']}"]
-        addAddress(mainVnext['address'], 'cn', False)
-        config['current-connection'] = connection2
+        # 选择要连接的配置
+        setConnection()
     elif ' ' in inputStr:
         # 向列表添加域名或 IP
         addAddressFromInputStr()
