@@ -41,6 +41,181 @@ subscriptions = config['subscriptions']
 imported = config['imported']
 outBounds = v2ray['outbounds']
 
+connections = []
+
+vmess = {}
+freedom = {}
+vmessIndex = 0
+freedomIndex = 0
+for index1, out1 in enumerate(outBounds):
+    outProtocol = out1['protocol']
+    if outProtocol == 'vmess':
+        vmess = out1
+        vmessIndex = index1
+    elif outProtocol == 'freedom':
+        freedom = out1
+        freedomIndex = index1
+
+gfwDomain = []
+gfwIp = []
+cnDomain = []
+cnIp = []
+for rule2 in v2ray['routing']['rules']:
+    outboundTag = rule2['outboundTag']
+    if outboundTag == vmess['tag']:
+        if 'domain' in rule2:
+            gfwDomain = rule2['domain']
+        elif 'ip' in rule2:
+            gfwIp = rule2['ip']
+    elif outboundTag == freedom['tag']:
+        if 'domain' in rule2:
+            cnDomain = rule2['domain']
+        elif 'ip' in rule2:
+            cnIp = rule2['ip']
+
+dnsGfw = []
+dnsCn = []
+if 'dns' in v2ray and 'servers' in v2ray['dns']:
+    for server1 in v2ray['dns']['servers']:
+        if type(server1) == dict:
+            dnsDomains = server1['domains']
+            if 'geosite:google' in dnsDomains:
+                dnsGfw = dnsDomains
+            elif 'geosite:cn' in dnsDomains:
+                dnsCn = dnsDomains
+
+mainVnext = vmess['settings']['vnext'][0]
+mainUser = mainVnext['users'][0]
+streamSettings = vmess['streamSettings']
+wsSettings = streamSettings['wsSettings']
+
+
+def isStartsWithHttp(string):
+    return string.startswith('http')
+
+
+def removeHttpSchemaPrefix(string):
+    return re.sub(r'https?://', '', string)
+
+
+def updateConnections(doPrint=False):
+    global connections
+    connections = []
+    echo = []
+    count = itertools.count(1)
+    if doPrint:
+        echo.append('\033[32m{}\033[0m\n'.format('imported'))
+    for connection1 in imported:
+        connections.append(connection1)
+        if doPrint:
+            echo.append('\033[34m{}\033[0m\t{}\t\t{}\n'.format(next(count), connection1['ps'], connection1['add']))
+    for url1, connections1 in subscriptions.items():
+        if doPrint:
+            echo.append('\033[32m{}\033[0m\n'.format(url1))
+        for connection3 in connections1:
+            connections.append(connection3)
+            if doPrint:
+                echo.append('\033[34m{}\033[0m\t{}\t\t{}\n'.format(next(count), connection3['ps'], connection3['add']))
+    if doPrint:
+        os.system('echo "{}" | less -r'.format(''.join(echo)))  # 我不知道怎么正确地通过两个 subprocess.PIPE 传递输入
+
+
+def getConnection(string):
+    try:
+        connection = json.loads(b64decode(string.replace('vmess://', '')))
+        if connection['v'] != '2':
+            print('不支持 version {}'.format(connection['v']))
+            return None
+        return {
+            'sorted': False,
+            **connection,
+        }
+    except Exception as e:
+        print(e)
+        return None
+
+
+def addImport(connection):
+    if not connection.startswith('vmess://'):
+        return
+    connection = getConnection(connection)
+    if connection:
+        imported.append(connection)
+
+
+def updateSubscriptions(url):
+    print(f'正在获取 {url}')
+    try:
+        response = requests.get(url, timeout=20)
+        connections3 = b64decode(response.text).decode()
+    except Exception as e:
+        print(e)
+        return
+    if 'vmess://' not in connections3:
+        print('返回空配置列表, 未更改')
+        return
+    subscriptions[url] = []
+    for connection6 in connections3.splitlines():
+        if not connection6:
+            continue
+        connection6 = getConnection(connection6)
+        if not connection6:
+            continue
+        subscriptions[url].append(connection6)
+
+
+def addAddress(address, target, rules):
+    if re.search(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', address):
+        if not rules:
+            return
+        if target == 'gfw':
+            if address in gfwIp:
+                print('{} 已经存在于 GFW IPs'.format(address))
+            else:
+                gfwIp.append(address)
+        else:
+            if address in cnIp:
+                print('{} 已经存在于 CN IPs'.format(address))
+            else:
+                cnIp.append(address)
+    else:
+        if isStartsWithHttp(address):
+            address = removeHttpSchemaPrefix(address)
+        domainItem = 'domain:{}'.format(address)
+        if target == 'gfw':
+            if rules:
+                if gfwDomain:
+                    if domainItem in gfwDomain:
+                        print('{} 已经存在于 GFW domains'.format(domainItem))
+                    else:
+                        gfwDomain.append(domainItem)
+            if dnsGfw:
+                if domainItem in dnsGfw:
+                    print('{} 已经存在于 GFW DNS domains'.format(domainItem))
+                else:
+                    dnsGfw.append(domainItem)
+        else:
+            if rules:
+                if cnDomain:
+                    if domainItem in cnDomain:
+                        print('{} 已经存在于 CN domains'.format(domainItem))
+                    else:
+                        cnDomain.append(domainItem)
+            if dnsCn:
+                if domainItem in dnsCn:
+                    print('{} 已经存在于 CN DNS domains'.format(domainItem))
+                else:
+                    dnsCn.append(domainItem)
+
+
+def addAddressFromInputStr():
+    if inputStr.startswith('gfw'):
+        target = 'gfw'
+    else:
+        target = 'cn'
+    address = inputStr.replace('{} '.format(target), '')
+    addAddress(address, target, True)
+
 
 def sortConnectionKeys(connection):
     if 'sorted' in connection:
@@ -93,181 +268,7 @@ def generateAndRestartAndExit():
     exit()
 
 
-def updateSubscriptions(url):
-    print(f'正在获取 {url}')
-    try:
-        response = requests.get(url, timeout=20)
-        connections3 = b64decode(response.text).decode()
-    except Exception as e:
-        print(e)
-        return
-    if 'vmess://' not in connections3:
-        print('返回空配置列表, 未更改')
-        return
-    subscriptions[url] = []
-    for connection6 in connections3.splitlines():
-        if not connection6:
-            continue
-        connection6 = getConnection(connection6)
-        if not connection6:
-            continue
-        subscriptions[url].append(connection6)
-
-
-def getConnection(string):
-    try:
-        connection = json.loads(b64decode(string.replace('vmess://', '')))
-        if connection['v'] != '2':
-            print('不支持 version {}'.format(connection['v']))
-            return None
-        return {
-            'sorted': False,
-            **connection,
-        }
-    except Exception as e:
-        print(e)
-        return None
-
-
-def isUrl(string):
-    return string.startswith('http')
-
-
-def removeSchema(string):
-    return re.sub(r'https?://', '', string)
-
-
-vmess = {}
-freedom = {}
-vmessIndex = 0
-freedomIndex = 0
-for index1, out1 in enumerate(outBounds):
-    outProtocol = out1['protocol']
-    if outProtocol == 'vmess':
-        vmess = out1
-        vmessIndex = index1
-    elif outProtocol == 'freedom':
-        freedom = out1
-        freedomIndex = index1
-gfwDomain = []
-gfwIp = []
-cnDomain = []
-cnIp = []
-for rule2 in v2ray['routing']['rules']:
-    outboundTag = rule2['outboundTag']
-    if outboundTag == vmess['tag']:
-        if 'domain' in rule2:
-            gfwDomain = rule2['domain']
-        elif 'ip' in rule2:
-            gfwIp = rule2['ip']
-    elif outboundTag == freedom['tag']:
-        if 'domain' in rule2:
-            cnDomain = rule2['domain']
-        elif 'ip' in rule2:
-            cnIp = rule2['ip']
-dnsGfw = []
-dnsCn = []
-if 'dns' in v2ray and 'servers' in v2ray['dns']:
-    for server1 in v2ray['dns']['servers']:
-        if type(server1) == dict:
-            dnsDomains = server1['domains']
-            if 'geosite:google' in dnsDomains:
-                dnsGfw = dnsDomains
-            elif 'geosite:cn' in dnsDomains:
-                dnsCn = dnsDomains
-mainVnext = vmess['settings']['vnext'][0]
-mainUser = mainVnext['users'][0]
-streamSettings = vmess['streamSettings']
-wsSettings = streamSettings['wsSettings']
-
-
-def addImport(connection):
-    if not connection.startswith('vmess://'):
-        return
-    connection = getConnection(connection)
-    if connection:
-        imported.append(connection)
-
-
-def addAddressFromInputStr():
-    if inputStr.startswith('gfw'):
-        target = 'gfw'
-    else:
-        target = 'cn'
-    address = inputStr.replace('{} '.format(target), '')
-    addAddress(address, target, True)
-
-
-def addAddress(address, target, rules):
-    if re.search(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', address):
-        if not rules:
-            return
-        if target == 'gfw':
-            if address in gfwIp:
-                print('{} 已经存在于 GFW IPs'.format(address))
-            else:
-                gfwIp.append(address)
-        else:
-            if address in cnIp:
-                print('{} 已经存在于 CN IPs'.format(address))
-            else:
-                cnIp.append(address)
-    else:
-        if isUrl(address):
-            address = removeSchema(address)
-        domainItem = 'domain:{}'.format(address)
-        if target == 'gfw':
-            if rules:
-                if gfwDomain:
-                    if domainItem in gfwDomain:
-                        print('{} 已经存在于 GFW domains'.format(domainItem))
-                    else:
-                        gfwDomain.append(domainItem)
-            if dnsGfw:
-                if domainItem in dnsGfw:
-                    print('{} 已经存在于 GFW DNS domains'.format(domainItem))
-                else:
-                    dnsGfw.append(domainItem)
-        else:
-            if rules:
-                if cnDomain:
-                    if domainItem in cnDomain:
-                        print('{} 已经存在于 CN domains'.format(domainItem))
-                    else:
-                        cnDomain.append(domainItem)
-            if dnsCn:
-                if domainItem in dnsCn:
-                    print('{} 已经存在于 CN DNS domains'.format(domainItem))
-                else:
-                    dnsCn.append(domainItem)
-
-
-connections = []
 first = True
-
-
-def updateConnections(doPrint=False):
-    global connections
-    connections = []
-    echo = []
-    count = itertools.count(1)
-    if doPrint:
-        echo.append('\033[32m{}\033[0m\n'.format('imported'))
-    for connection1 in imported:
-        connections.append(connection1)
-        if doPrint:
-            echo.append('\033[34m{}\033[0m\t{}\t\t{}\n'.format(next(count), connection1['ps'], connection1['add']))
-    for url1, connections1 in subscriptions.items():
-        if doPrint:
-            echo.append('\033[32m{}\033[0m\n'.format(url1))
-        for connection3 in connections1:
-            connections.append(connection3)
-            if doPrint:
-                echo.append('\033[34m{}\033[0m\t{}\t\t{}\n'.format(next(count), connection3['ps'], connection3['add']))
-    if doPrint:
-        os.system('echo "{}" | less -r'.format(''.join(echo)))  # 我不知道怎么正确地通过两个 subprocess.PIPE 传递输入
-
-
 while True:
     if first:
         first = False
@@ -366,6 +367,6 @@ while True:
         addAddressFromInputStr()
     else:
         # 订阅地址
-        if not isUrl(inputStr):
+        if not isStartsWithHttp(inputStr):
             inputStr = 'http://' + inputStr
         updateSubscriptions(inputStr)
