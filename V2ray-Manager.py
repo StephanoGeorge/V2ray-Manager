@@ -7,6 +7,7 @@ import re
 from base64 import b64decode
 from pathlib import Path
 
+import pyperclip
 import requests
 import yaml
 
@@ -118,14 +119,14 @@ def getConnection(string):
         connection = json.loads(b64decode(string.replace('vmess://', '')))
         if connection['v'] != '2':
             print('不支持 version {}'.format(connection['v']))
-            return
+            return None
         return {
             'sorted': False,
             **connection,
         }
     except Exception as e:
         print(e)
-        return
+        return None
 
 
 def isUrl(string):
@@ -178,6 +179,14 @@ mainVnext = vmess['settings']['vnext'][0]
 mainUser = mainVnext['users'][0]
 streamSettings = vmess['streamSettings']
 wsSettings = streamSettings['wsSettings']
+
+
+def addImport(connection):
+    if not connection.startswith('vmess://'):
+        return
+    connection = getConnection(connection)
+    if connection:
+        imported.append(connection)
 
 
 def addAddressFromInputStr():
@@ -262,35 +271,51 @@ def updateConnections(doPrint=False):
 while True:
     if first:
         first = False
-        print('键入: vmess 连接配置, 或订阅地址, 或 u 以更新订阅, 或要连接的配置序号,\n'
-              '      或 "gfw google.com"/"cn 223.5.5.5" 向黑白名单列表添加域名或 IP,\n'
-              '      或 d 以切换默认出站, 或 f 以切换前台运行 V2ray, 或 s 以切换使用 sudo 运行 V2ray\n'
-              '      或 r 以移除所有规则并备份或从备份中恢复, 或 a 以移除拦截广告的规则并备份或或从备份中恢复\n'
-              '      或 p 以查看配置列表, 或回车以保存配置并运行, 或 q 以保存配置并退出')
+        print('功能: 需要键入的内容\n'
+              '从剪贴板添加 vmess 连接配置: c\n'
+              '添加订阅地址: <订阅地址>\n'
+              '更新订阅: u\n'
+              '查看配置列表: p\n'
+              '选择要连接的配置: <序号>\n'
+              '保存配置并运行: (回车)\n'
+              '保存配置并退出: q\n'
+              '向黑白名单列表(rules与dns)添加域名或 IP: (形如 "gfw google.com" 或 "cn 223.5.5.5")\n'
+              '切换默认出站(freedom/vmess): d\n'
+              '切换前台运行 V2Ray: f\n'
+              '切换使用 sudo 运行 V2Ray: s\n'
+              '移除所有规则并备份, 或从备份中恢复: r\n'
+              '移除拦截广告的规则并备份, 或从备份中恢复: a')
     print(f"\n默认出站: \33[33m{outBounds[0]['protocol']}\33[0m\n" +
           "要连接的配置: \33[33m{}\33[0m\n".format(
               f"{config['current-connection']['ps']}: {config['current-connection']['add']}"
               if config['current-connection'] else ''
           ) +
-          f"在前台运行 V2ray: \33[33m{config['run-in-front']}\33[0m\n"
-          f"使用 sudo 运行 V2ray: \33[33m{config['use-sudo']}\33[0m")
+          f"在前台运行 V2Ray: \33[33m{config['run-in-front']}\33[0m\n"
+          f"使用 sudo 运行 V2Ray: \33[33m{config['use-sudo']}\33[0m")
     inputStr = input().strip()
     if inputStr == '':
         generateAndRestartAndExit()
-    elif inputStr == 'f':
-        config['run-in-front'] = not config['run-in-front']
-    elif inputStr == 's':
-        config['use-sudo'] = not config['use-sudo']
+    elif inputStr == 'c':
+        connections2 = re.split(r'\n|\\n', pyperclip.paste())
+        for connection5 in connections2:
+            addImport(connection5)
+    elif inputStr == 'u':
+        for url4, connection4 in subscriptions.items():
+            updateSubscriptions(url4)
+    elif inputStr == 'p':
+        updateConnections(True)
+    elif inputStr == 'q':
+        saveConfig()
+        exit()
     elif inputStr == 'd':
         if outBounds[0]['protocol'] == 'vmess':
             outBounds[0], outBounds[freedomIndex] = outBounds[freedomIndex], outBounds[0]
         else:
             outBounds[0], outBounds[vmessIndex] = outBounds[vmessIndex], outBounds[0]
-    elif inputStr == 'p':
-        updateConnections(True)
-    elif inputStr == 'u':
-        for url4, connection4 in subscriptions.items():
-            updateSubscriptions(url4)
+    elif inputStr == 'f':
+        config['run-in-front'] = not config['run-in-front']
+    elif inputStr == 's':
+        config['use-sudo'] = not config['use-sudo']
     elif inputStr == 'r':
         if v2ray['routing']['rules']:
             config['config']['routing']['rules'] = v2ray['routing']['rules']
@@ -312,9 +337,6 @@ while True:
             v2ray['routing']['rules'].pop(ruleIndex2)
         else:
             v2ray['routing']['rules'].append(config['config']['routing']['_category-ads-all'])
-    elif inputStr == 'q':
-        saveConfig()
-        exit()
     elif inputStr.isdigit():
         if not connections:
             updateConnections()
@@ -339,16 +361,6 @@ while True:
                                               if domain2 != f"domain:{config['current-connection']['add']}"]
         addAddress(mainVnext['address'], 'cn', False)
         config['current-connection'] = connection2
-    elif inputStr.startswith('vmess://'):
-        # 连接配置
-        connections2 = re.split(r'\n|\\n', inputStr)
-        for connection5 in connections2:
-            if 'vmess://' not in connection5:
-                continue
-            connection5 = getConnection(connection5)
-            if not connection5:
-                continue
-            imported.append(connection5)
     elif ' ' in inputStr:
         # 向列表添加域名或 IP
         addAddressFromInputStr()
