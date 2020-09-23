@@ -351,8 +351,10 @@ while True:
     elif inputStr == 'd':
         if outBounds[0]['protocol'] == 'vmess':
             outBounds[0], outBounds[freedomIndex] = outBounds[freedomIndex], outBounds[0]
+            vmessIndex, freedomIndex = freedomIndex, 0
         else:
             outBounds[0], outBounds[vmessIndex] = outBounds[vmessIndex], outBounds[0]
+            vmessIndex, freedomIndex = 0, vmessIndex
     elif inputStr == 'f':
         config['run-in-front'] = not config['run-in-front']
     elif inputStr == 's':
