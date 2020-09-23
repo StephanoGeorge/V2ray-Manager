@@ -8,7 +8,7 @@
 
 ## 首次运行
 
-将 V2Ray 配置文件置于此脚本所在目录, 并重命名为 `V2Ray-Config.json`.
+将 V2Ray 配置文件重命名为 `V2Ray-Config.json`, 并置于 `~/.config/V2Ray-Manager/` 中.
 
 确保配置中的 `vmess` 出站包含以下形式的 `streamSettings`:
 

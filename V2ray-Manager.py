@@ -11,9 +11,9 @@ import pyperclip
 import requests
 import yaml
 
-path = Path.home() / '.config/V2ray-Manager-Denis'
+path = Path.home() / '.config/V2Ray-Manager'
 configPath = path / 'Config.yaml'
-v2rayPath = path / 'V2ray-Config.json'
+v2rayPath = path / 'V2Ray-Config.json'
 
 path.mkdir(parents=True, exist_ok=True)
 configPath.touch()
