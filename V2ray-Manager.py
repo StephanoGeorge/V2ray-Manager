@@ -249,8 +249,9 @@ def setConnection():
         if 'dns' in v2ray and 'servers' in v2ray['dns']:
             for server2 in v2ray['dns']['servers']:
                 if type(server2) == dict and 'domains' in server2:
-                    server2['domains'] = [domain2 for domain2 in server2['domains']
-                                          if domain2 != f"domain:{config['current-connection']['add']}"]
+                    domainItem1 = f"domain:{config['current-connection']['add']}"
+                    if domainItem1 in server2['domains']:
+                        server2['domains'].remove(domainItem1)
     addAddress(mainVnext['address'], 'cn', False)
     config['current-connection'] = connection2
 
