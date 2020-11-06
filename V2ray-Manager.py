@@ -259,7 +259,7 @@ def sortConnectionKeys(connection):
             'add': connection['add'],
             'port': connection['port'],
             'id': connection['id'],
-            'aid': connection['aid'],
+            'aid': connection['aid'] if 'aid' in connection else '0',
             'net': connection['net'],
             'type': connection['type'],
         }
