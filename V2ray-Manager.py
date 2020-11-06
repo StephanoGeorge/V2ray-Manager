@@ -125,7 +125,7 @@ def getConnection(string):
             **connection,
         }
     except Exception as e:
-        print(e)
+        print(type(e), e)
         return None
 
 
@@ -142,7 +142,7 @@ def updateSubscriptions(url):
             connections3 = b64decode(response.text).decode()
             break
         except Exception as e:
-            print(e)
+            print(type(e), e)
             continue
     else:
         print(f'更新失败: {url}')
