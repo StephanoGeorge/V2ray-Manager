@@ -117,7 +117,7 @@ def getConnection(string):
         return None
     try:
         connection = json.loads(b64decode(string.replace('vmess://', '')))
-        if connection['v'] != '2':
+        if 'v' in connection and connection['v'] != '2':
             print('不支持 version {}'.format(connection['v']))
             return None
         return {
@@ -125,7 +125,7 @@ def getConnection(string):
             **connection,
         }
     except Exception as e:
-        print(type(e), e)
+        print(f'{type(e).__name__}: {e}')
         return None
 
 
@@ -142,7 +142,7 @@ def updateSubscriptions(url):
             connections3 = b64decode(response.text).decode()
             break
         except Exception as e:
-            print(type(e), e)
+            print(f'{type(e).__name__}: {e}')
             continue
     else:
         print(f'更新失败: {url}')
