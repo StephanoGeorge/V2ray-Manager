@@ -319,7 +319,7 @@ def main():
         if first:
             first = False
             print(
-                '功能: 需要键入的内容\n'
+                '以下为: "功能: 键入的内容"\n'
                 '从剪贴板添加 vmess 连接配置: c\n'
                 '添加订阅地址: <订阅地址>\n'
                 '更新订阅: u\n'
