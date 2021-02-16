@@ -54,9 +54,9 @@ cn_ip = []
 dns_gfw = []
 dns_cn = []
 
-main_vnext = vmess['settings']['vnext'][0]
-main_user = main_vnext['users'][0]
-stream_settings = vmess['streamSettings']
+main_vnext = {}
+main_user = {}
+stream_settings = {}
 
 input_str = ''
 
@@ -64,7 +64,8 @@ do_update_subscriptions = False
 
 
 def init():
-    global vmess, vmess_index, freedom, freedom_index, gfw_domain, gfw_ip, cn_domain, cn_ip, dns_gfw, dns_cn
+    global vmess, vmess_index, freedom, freedom_index, gfw_domain, gfw_ip, cn_domain, cn_ip, dns_gfw, dns_cn, \
+        main_vnext, main_user, stream_settings
     for index1, out1 in enumerate(out_bounds):
         out_protocol = out1['protocol']
         if out_protocol == 'vmess':
@@ -93,6 +94,9 @@ def init():
                     dns_gfw = dns_domains
                 elif 'geosite:cn' in dns_domains:
                     dns_cn = dns_domains
+    main_vnext = vmess['settings']['vnext'][0]
+    main_user = main_vnext['users'][0]
+    stream_settings = vmess['streamSettings']
 
 
 def update_connections(do_print=False):
@@ -101,18 +105,18 @@ def update_connections(do_print=False):
     echo = []
     count = itertools.count(1)
     if do_print:
-        echo.append(f"{highlight('imported')}\n")
+        echo.append(f"{highlight('imported', 32)}\n")
     for connection1 in imported:
         connections.append(connection1)
         if do_print:
-            echo.append(f"{highlight(next(count))}\t{connection1['ps']}\t\t{connection1['add']}\n")
+            echo.append(f"{highlight(next(count), 34)}\t{connection1['ps']}\t\t{connection1['add']}\n")
     for url1, connections1 in subscriptions.items():
         if do_print:
-            echo.append(f'{url1}\n')
+            echo.append(f'{highlight(url1, 32)}\n')
         for connection2 in connections1:
             connections.append(connection2)
             if do_print:
-                echo.append(f"{highlight(next(count))}\t{connection2['ps']}\t\t{connection2['add']}\n")
+                echo.append(f"{highlight(next(count), 34)}\t{connection2['ps']}\t\t{connection2['add']}\n")
     if do_print:
         os.system(f'''echo "{''.join(echo)}" | less -r''')  # 我不知道怎么正确地通过两个 subprocess.PIPE 传递输入
 
@@ -307,8 +311,8 @@ def generate_and_restart_and_exit():
     exit()
 
 
-def highlight(string):
-    return f'\33[33m{string}\33[0m'
+def highlight(string, code=33):
+    return f'\33[{code}m{string}\33[0m'
 
 
 def main():
