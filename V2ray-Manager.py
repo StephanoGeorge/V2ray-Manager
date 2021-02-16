@@ -16,7 +16,7 @@ path = Path.home() / '.config' / 'V2Ray-Manager'
 config_path = path / 'Config.yaml'
 v2ray_path = path / 'V2Ray-Config.json'
 
-path.mkdir(parents=True, exist_ok=True)
+# path.mkdir(parents=True, exist_ok=True)
 config_path.touch()
 with config_path.open() as config_stream:
     config = yaml.safe_load(config_stream)

@@ -24,7 +24,7 @@ ln -s $PWD/V2Ray-Manager.py ~/.local/bin/v2man
 
 ```
 $ v2man
-功能: 需要键入的内容
+以下为: "功能: 键入的内容"
 从剪贴板添加 vmess 连接配置: c
 添加订阅地址: <订阅地址>
 更新订阅: u
