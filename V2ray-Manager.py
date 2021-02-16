@@ -320,101 +320,104 @@ def main():
     init()
     first = True
     while True:
-        if first:
-            first = False
+        try:
+            if first:
+                first = False
+                print(
+                    '以下为: "功能: 键入的内容"\n'
+                    '从剪贴板添加 vmess 连接配置: c\n'
+                    '添加订阅地址: <订阅地址>\n'
+                    '更新订阅: u\n'
+                    '查看配置列表: p\n'
+                    '选择要连接的配置: <序号>\n'
+                    '保存配置并运行: (回车)\n'
+                    '保存配置并退出: q\n'
+                    '向黑白名单列表(rules与dns)添加域名或IP: (形如 "gfw google.com" 或 "cn 223.5.5.5")\n'
+                    '切换默认出站(freedom/vmess): d\n'
+                    '切换前台运行 V2Ray: f\n'
+                    '切换使用 sudo 运行 V2Ray: s\n'
+                    '移除所有规则并备份, 或从备份中恢复: r\n'
+                    '移除拦截广告的规则并备份, 或从备份中恢复: a'
+                )
             print(
-                '以下为: "功能: 键入的内容"\n'
-                '从剪贴板添加 vmess 连接配置: c\n'
-                '添加订阅地址: <订阅地址>\n'
-                '更新订阅: u\n'
-                '查看配置列表: p\n'
-                '选择要连接的配置: <序号>\n'
-                '保存配置并运行: (回车)\n'
-                '保存配置并退出: q\n'
-                '向黑白名单列表(rules与dns)添加域名或IP: (形如 "gfw google.com" 或 "cn 223.5.5.5")\n'
-                '切换默认出站(freedom/vmess): d\n'
-                '切换前台运行 V2Ray: f\n'
-                '切换使用 sudo 运行 V2Ray: s\n'
-                '移除所有规则并备份, 或从备份中恢复: r\n'
-                '移除拦截广告的规则并备份, 或从备份中恢复: a'
+                f"\n默认出站: {highlight(out_bounds[0]['protocol'])}\n"
+                f'''要连接的配置: {highlight(
+                    f"{config['current-connection']['ps']}: {config['current-connection']['add']}"
+                    if config['current-connection'] else ''
+                )}\n'''
+                f"在前台运行 V2Ray: {highlight(config['run-in-front'])}\n"
+                f"使用 sudo 运行 V2Ray: {highlight(config['use-sudo'])}"
             )
-        print(
-            f"\n默认出站: {highlight(out_bounds[0]['protocol'])}\n"
-            f'''要连接的配置: {highlight(
-                f"{config['current-connection']['ps']}: {config['current-connection']['add']}"
-                if config['current-connection'] else ''
-            )}\n'''
-            f"在前台运行 V2Ray: {highlight(config['run-in-front'])}\n"
-            f"使用 sudo 运行 V2Ray: {highlight(config['use-sudo'])}"
-        )
-        input_str = input().strip()
-        if input_str == '':
-            generate_and_restart_and_exit()
-        elif input_str == 'c':
-            for connection in re.split(r'\n|\\n', pyperclip.paste()):
-                add_import(connection)
-        elif input_str == 'u':
-            print('Ctrl+C 以终止')
-            do_update_subscriptions = True
-            threads = []
-            for url1, connection1 in subscriptions.items():
-                thread1 = Thread(target=update_subscriptions, args=(url1,))
-                threads.append(thread1)
-                thread1.start()
-            try:
-                for thread2 in threads:
-                    thread2.join()
-            except KeyboardInterrupt:
-                print()
-                do_update_subscriptions = False
-        elif input_str == 'p':
-            update_connections(do_print=True)
-        elif input_str == 'q':
-            save_config()
-            exit()
-        elif input_str == 'd':
-            if out_bounds[0]['protocol'] == 'vmess':
-                out_bounds[0], out_bounds[freedom_index] = out_bounds[freedom_index], out_bounds[0]
-                vmess_index, freedom_index = freedom_index, 0
+            input_str = input().strip()
+            if input_str == '':
+                generate_and_restart_and_exit()
+            elif input_str == 'c':
+                for connection in re.split(r'\n|\\n', pyperclip.paste()):
+                    add_import(connection)
+            elif input_str == 'u':
+                print('Ctrl+C 以终止')
+                do_update_subscriptions = True
+                threads = []
+                for url1, connection1 in subscriptions.items():
+                    thread1 = Thread(target=update_subscriptions, args=(url1,))
+                    threads.append(thread1)
+                    thread1.start()
+                try:
+                    for thread2 in threads:
+                        thread2.join()
+                except KeyboardInterrupt:
+                    print()
+                    do_update_subscriptions = False
+            elif input_str == 'p':
+                update_connections(do_print=True)
+            elif input_str == 'q':
+                save_config()
+                exit()
+            elif input_str == 'd':
+                if out_bounds[0]['protocol'] == 'vmess':
+                    out_bounds[0], out_bounds[freedom_index] = out_bounds[freedom_index], out_bounds[0]
+                    vmess_index, freedom_index = freedom_index, 0
+                else:
+                    out_bounds[0], out_bounds[vmess_index] = out_bounds[vmess_index], out_bounds[0]
+                    vmess_index, freedom_index = 0, vmess_index
+            elif input_str == 'f':
+                config['run-in-front'] = not config['run-in-front']
+            elif input_str == 's':
+                config['use-sudo'] = not config['use-sudo']
+            elif input_str == 'r':
+                if v2ray['routing']['rules']:
+                    config['config']['routing']['rules'] = v2ray['routing']['rules']
+                    v2ray['routing']['rules'] = []
+                else:
+                    v2ray['routing']['rules'] = config['config']['routing']['rules']
+            elif input_str == 'a':
+                if not v2ray['routing']['rules']:
+                    continue
+                ok1 = False
+                rule_index = -1
+                for rule_index1, rule1 in enumerate(v2ray['routing']['rules']):
+                    if 'domain' in rule1 and 'geosite:category-ads-all' in rule1['domain']:
+                        ok1 = True
+                        rule_index = rule_index1
+                        break
+                if ok1:
+                    config['config']['routing']['_category-ads-all'] = v2ray['routing']['rules'][rule_index]
+                    v2ray['routing']['rules'].pop(rule_index)
+                else:
+                    v2ray['routing']['rules'].append(config['config']['routing']['_category-ads-all'])
+            elif input_str.isdecimal():
+                # 选择要连接的配置
+                set_connection()
+            elif re.search('^(gfw)|(cn) .', input_str):
+                # 向列表添加域名或 IP
+                add_address_from_input_str()
             else:
-                out_bounds[0], out_bounds[vmess_index] = out_bounds[vmess_index], out_bounds[0]
-                vmess_index, freedom_index = 0, vmess_index
-        elif input_str == 'f':
-            config['run-in-front'] = not config['run-in-front']
-        elif input_str == 's':
-            config['use-sudo'] = not config['use-sudo']
-        elif input_str == 'r':
-            if v2ray['routing']['rules']:
-                config['config']['routing']['rules'] = v2ray['routing']['rules']
-                v2ray['routing']['rules'] = []
-            else:
-                v2ray['routing']['rules'] = config['config']['routing']['rules']
-        elif input_str == 'a':
-            if not v2ray['routing']['rules']:
-                continue
-            ok1 = False
-            rule_index = -1
-            for rule_index1, rule1 in enumerate(v2ray['routing']['rules']):
-                if 'domain' in rule1 and 'geosite:category-ads-all' in rule1['domain']:
-                    ok1 = True
-                    rule_index = rule_index1
-                    break
-            if ok1:
-                config['config']['routing']['_category-ads-all'] = v2ray['routing']['rules'][rule_index]
-                v2ray['routing']['rules'].pop(rule_index)
-            else:
-                v2ray['routing']['rules'].append(config['config']['routing']['_category-ads-all'])
-        elif input_str.isdecimal():
-            # 选择要连接的配置
-            set_connection()
-        elif re.search('^(gfw)|(cn) .', input_str):
-            # 向列表添加域名或 IP
-            add_address_from_input_str()
-        else:
-            # 订阅地址
-            if not input_str.startswith('http'):
-                input_str = f'http://{input_str}'
-            update_subscriptions(input_str)
+                # 订阅地址
+                if not input_str.startswith('http'):
+                    input_str = f'http://{input_str}'
+                update_subscriptions(input_str)
+        except Exception as e:
+            print(f'{type(e).__name__}: {e}')
 
 
 main()
