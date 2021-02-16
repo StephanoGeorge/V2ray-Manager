@@ -18,8 +18,7 @@ v2ray_path = path / 'V2Ray-Config.json'
 
 # path.mkdir(parents=True, exist_ok=True)
 config_path.touch()
-with config_path.open() as config_stream:
-    config = yaml.safe_load(config_stream)
+config = yaml.safe_load(config_path.read_text())
 if not config:
     config = {
         'run-in-front': False,
@@ -35,8 +34,7 @@ if not config:
             }
         },
     }
-with v2ray_path.open() as v2ray_stream:
-    v2ray = json.load(v2ray_stream)
+v2ray = json.loads(v2ray_path.read_text())
 
 subscriptions = config['subscriptions']
 imported = config['imported']
@@ -48,42 +46,13 @@ vmess = {}
 freedom = {}
 vmess_index = 0
 freedom_index = 0
-for index1, out1 in enumerate(out_bounds):
-    out_protocol = out1['protocol']
-    if out_protocol == 'vmess':
-        vmess = out1
-        vmess_index = index1
-    elif out_protocol == 'freedom':
-        freedom = out1
-        freedom_index = index1
 
 gfw_domain = []
 gfw_ip = []
 cn_domain = []
 cn_ip = []
-for rule1 in v2ray['routing']['rules']:
-    outbound_tag = rule1['outboundTag']
-    if outbound_tag == vmess['tag']:
-        if 'domain' in rule1:
-            gfw_domain = rule1['domain']
-        elif 'ip' in rule1:
-            gfw_ip = rule1['ip']
-    elif outbound_tag == freedom['tag']:
-        if 'domain' in rule1:
-            cn_domain = rule1['domain']
-        elif 'ip' in rule1:
-            cn_ip = rule1['ip']
-
 dns_gfw = []
 dns_cn = []
-if 'dns' in v2ray and 'servers' in v2ray['dns']:
-    for server1 in v2ray['dns']['servers']:
-        if type(server1) == dict:
-            dns_domains = server1['domains']
-            if 'geosite:google' in dns_domains:
-                dns_gfw = dns_domains
-            elif 'geosite:cn' in dns_domains:
-                dns_cn = dns_domains
 
 main_vnext = vmess['settings']['vnext'][0]
 main_user = main_vnext['users'][0]
@@ -92,6 +61,38 @@ stream_settings = vmess['streamSettings']
 input_str = ''
 
 do_update_subscriptions = False
+
+
+def init():
+    global vmess, vmess_index, freedom, freedom_index, gfw_domain, gfw_ip, cn_domain, cn_ip, dns_gfw, dns_cn
+    for index1, out1 in enumerate(out_bounds):
+        out_protocol = out1['protocol']
+        if out_protocol == 'vmess':
+            vmess = out1
+            vmess_index = index1
+        elif out_protocol == 'freedom':
+            freedom = out1
+            freedom_index = index1
+    for rule1 in v2ray['routing']['rules']:
+        outbound_tag = rule1['outboundTag']
+        if outbound_tag == vmess['tag']:
+            if 'domain' in rule1:
+                gfw_domain = rule1['domain']
+            elif 'ip' in rule1:
+                gfw_ip = rule1['ip']
+        elif outbound_tag == freedom['tag']:
+            if 'domain' in rule1:
+                cn_domain = rule1['domain']
+            elif 'ip' in rule1:
+                cn_ip = rule1['ip']
+    if 'dns' in v2ray and 'servers' in v2ray['dns']:
+        for server1 in v2ray['dns']['servers']:
+            if type(server1) == dict:
+                dns_domains = server1['domains']
+                if 'geosite:google' in dns_domains:
+                    dns_gfw = dns_domains
+                elif 'geosite:cn' in dns_domains:
+                    dns_cn = dns_domains
 
 
 def update_connections(do_print=False):
@@ -312,6 +313,7 @@ def highlight(string):
 
 def main():
     global input_str, vmess_index, freedom_index, do_update_subscriptions
+    init()
     first = True
     while True:
         if first:
@@ -388,10 +390,10 @@ def main():
                 continue
             ok1 = False
             rule_index = -1
-            for rule_index2, rule2 in enumerate(v2ray['routing']['rules']):
-                if 'domain' in rule2 and 'geosite:category-ads-all' in rule2['domain']:
+            for rule_index1, rule1 in enumerate(v2ray['routing']['rules']):
+                if 'domain' in rule1 and 'geosite:category-ads-all' in rule1['domain']:
                     ok1 = True
-                    rule_index = rule_index2
+                    rule_index = rule_index1
                     break
             if ok1:
                 config['config']['routing']['_category-ads-all'] = v2ray['routing']['rules'][rule_index]
