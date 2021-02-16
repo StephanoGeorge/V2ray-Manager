@@ -350,7 +350,7 @@ def main():
             for connection in re.split(r'\n|\\n', pyperclip.paste()):
                 add_import(connection)
         elif input_str == 'u':
-            print('^C 以终止')
+            print('Ctrl+C 以终止')
             do_update_subscriptions = True
             threads = []
             for url1, connection1 in subscriptions.items():
