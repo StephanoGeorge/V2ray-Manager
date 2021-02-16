@@ -100,20 +100,20 @@ def update_connections(do_print=False):
     echo = []
     count = itertools.count(1)
     if do_print:
-        echo.append('\033[32m{}\033[0m\n'.format('imported'))
+        echo.append(f"{highlight('imported')}\n")
     for connection1 in imported:
         connections.append(connection1)
         if do_print:
-            echo.append('\033[34m{}\033[0m\t{}\t\t{}\n'.format(next(count), connection1['ps'], connection1['add']))
+            echo.append(f"{highlight(next(count))}\t{connection1['ps']}\t\t{connection1['add']}\n")
     for url1, connections1 in subscriptions.items():
         if do_print:
-            echo.append('\033[32m{}\033[0m\n'.format(url1))
+            echo.append(f'{url1}\n')
         for connection2 in connections1:
             connections.append(connection2)
             if do_print:
-                echo.append('\033[34m{}\033[0m\t{}\t\t{}\n'.format(next(count), connection2['ps'], connection2['add']))
+                echo.append(f"{highlight(next(count))}\t{connection2['ps']}\t\t{connection2['add']}\n")
     if do_print:
-        os.system('echo "{}" | less -r'.format(''.join(echo)))  # 我不知道怎么正确地通过两个 subprocess.PIPE 传递输入
+        os.system(f'''echo "{''.join(echo)}" | less -r''')  # 我不知道怎么正确地通过两个 subprocess.PIPE 传递输入
 
 
 def get_connection(string):
@@ -122,7 +122,7 @@ def get_connection(string):
     try:
         connection = json.loads(b64decode(string.replace('vmess://', '')))
         if 'v' in connection and connection['v'] != '2':
-            print('不支持 version {}'.format(connection['v']))
+            print(f"不支持 version {connection['v']}")
             return None
         return {
             'sorted': False,
@@ -173,40 +173,40 @@ def add_address(address, target, rules):
             return
         if target == 'gfw':
             if address in gfw_ip:
-                print('{} 已经存在于 GFW IPs'.format(address))
+                print(f'已经存在于 GFW IPs: {address}')
             else:
                 gfw_ip.append(address)
         else:
             if address in cn_ip:
-                print('{} 已经存在于 CN IPs'.format(address))
+                print(f'已经存在于 CN IPs: {address}')
             else:
                 cn_ip.append(address)
     else:
         if address.startswith('http'):
             address = re.sub(r'https?://', '', address)
-        domain_item = 'domain:{}'.format(address)
+        domain_item = f'domain:{address}'
         if target == 'gfw':
             if rules:
                 if gfw_domain:
                     if domain_item in gfw_domain:
-                        print('{} 已经存在于 GFW domains'.format(domain_item))
+                        print(f'已经存在于 GFW domains: {domain_item}')
                     else:
                         gfw_domain.append(domain_item)
             if dns_gfw:
                 if domain_item in dns_gfw:
-                    print('{} 已经存在于 GFW DNS domains'.format(domain_item))
+                    print(f'已经存在于 GFW DNS domains: {domain_item}')
                 else:
                     dns_gfw.append(domain_item)
         else:
             if rules:
                 if cn_domain:
                     if domain_item in cn_domain:
-                        print('{} 已经存在于 CN domains'.format(domain_item))
+                        print(f'已经存在于 CN domains: {domain_item}')
                     else:
                         cn_domain.append(domain_item)
             if dns_cn:
                 if domain_item in dns_cn:
-                    print('{} 已经存在于 CN DNS domains'.format(domain_item))
+                    print(f"已经存在于 CN DNS domains: {domain_item}")
                 else:
                     dns_cn.append(domain_item)
 
@@ -216,7 +216,7 @@ def add_address_from_input_str():
         target = 'gfw'
     else:
         target = 'cn'
-    address = input_str.replace('{} '.format(target), '')
+    address = input_str.removeprefix(f'{target} ')
     add_address(address, target, True)
 
 
@@ -284,10 +284,8 @@ def save_config():
     for url2 in subscriptions.keys():
         for i2, connection2 in enumerate(subscriptions[url2]):
             subscriptions[url2][i2] = sort_connection_keys(connection2)
-    with config_path.open('w') as configStream1:
-        yaml.safe_dump(config, configStream1, indent=4, allow_unicode=True, sort_keys=False)
-    with v2ray_path.open('w') as v2rayStream1:
-        json.dump(v2ray, v2rayStream1, indent=4)
+    config_path.write_text(yaml.safe_dump(config, indent=4, allow_unicode=True, sort_keys=False))
+    v2ray_path.write_text(json.dumps(v2ray, indent=4))
 
 
 def generate_and_restart_and_exit():
