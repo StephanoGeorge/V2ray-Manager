@@ -88,7 +88,7 @@ def init():
                 cn_ip = rule1['ip']
     if 'dns' in v2ray and 'servers' in v2ray['dns']:
         for server1 in v2ray['dns']['servers']:
-            if type(server1) == dict:
+            if isinstance(server1, dict):
                 dns_domains = server1['domains']
                 if 'geosite:google' in dns_domains:
                     dns_gfw = dns_domains
@@ -257,7 +257,7 @@ def set_connection():
     if config['current-connection']:
         if 'dns' in v2ray and 'servers' in v2ray['dns']:
             for server in v2ray['dns']['servers']:
-                if type(server) == dict and 'domains' in server:
+                if isinstance(server, dict) and 'domains' in server:
                     domainItem = f"domain:{config['current-connection']['add']}"
                     if domainItem in server['domains']:
                         server['domains'].remove(domainItem)
