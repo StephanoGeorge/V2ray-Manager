@@ -153,6 +153,8 @@ def update_subscriptions(url):
             new_connections = b64decode(response.text).decode()
             break
         except Exception as e:
+            if not do_update_subscriptions:
+                return
             print(f'{type(e).__name__}: {e}')
             continue
     else:
