@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
+import argparse
 import itertools
 import json
 import os
@@ -12,9 +13,13 @@ import pyperclip
 import requests
 import yaml
 
-path = Path.home() / '.config' / 'V2Ray-Manager'
+parser = argparse.ArgumentParser()
+user = os.getenv('SUDO_USER')
+default_path = Path('/' if user == 'root' else '/home') / user / '.config' / 'V2Ray-Manager'
+parser.add_argument('--config', default=default_path, help='V2ray manager config path')
+args = parser.parse_args()
+path = args.config
 config_path = path / 'Config.yaml'
-v2ray_path = path / 'V2Ray-Config.json'
 
 # path.mkdir(parents=True, exist_ok=True)
 config_path.touch()
@@ -22,8 +27,8 @@ config = yaml.safe_load(config_path.read_text())
 if not config:
     config = {
         'run-in-front': False,
-        'use-sudo': False,
-        'v2ray-command': 'v2ray',
+        'v2ray-config': '/etc/v2ray/config.json',
+        'v2ray-command': 'systemctl restart v2ray.service',
         'current-connection': None,
         'imported': [],
         'subscriptions': {},
@@ -34,6 +39,7 @@ if not config:
             }
         },
     }
+v2ray_path = Path(config['v2ray-config'])
 v2ray = json.loads(v2ray_path.read_text())
 
 subscriptions = config['subscriptions']
@@ -297,19 +303,10 @@ def save_config():
 
 def generate_and_restart_and_exit():
     save_config()
-    if config['use-sudo']:
-        os.system('sudo whoami')
-        os.system('sudo killall v2ray > /dev/null 2>&1')
-        if config['run-in-front']:
-            os.system(f"sudo {config['v2ray-command']} -config {v2ray_path.resolve()}")
-        else:
-            os.system(f"nohup sudo {config['v2ray-command']} -config {v2ray_path.resolve()} > /dev/null 2>&1 &")
+    if config['run-in-front']:
+        os.system(f"{config['v2ray-command']}")
     else:
-        os.system('killall v2ray > /dev/null 2>&1')
-        if config['run-in-front']:
-            os.system(f"{config['v2ray-command']} -config {v2ray_path.resolve()}")
-        else:
-            os.system(f"nohup {config['v2ray-command']} -config {v2ray_path.resolve()} > /dev/null 2>&1 &")
+        os.system(f"nohup {config['v2ray-command']} > /dev/null 2>&1 &")
     exit()
 
 
@@ -337,7 +334,6 @@ def main():
                     '向黑白名单列表(rules与dns)添加域名或IP: (形如 "gfw google.com" 或 "cn 223.5.5.5")\n'
                     '切换默认出站(freedom/vmess): d\n'
                     '切换前台运行 V2Ray: f\n'
-                    '切换使用 sudo 运行 V2Ray: s\n'
                     '移除所有规则并备份, 或从备份中恢复: r\n'
                     '移除拦截广告的规则并备份, 或从备份中恢复: a'
                 )
@@ -347,8 +343,7 @@ def main():
                     f"{config['current-connection']['ps']}: {config['current-connection']['add']}"
                     if config['current-connection'] else ''
                 )}\n'''
-                f"在前台运行 V2Ray: {highlight(config['run-in-front'])}\n"
-                f"使用 sudo 运行 V2Ray: {highlight(config['use-sudo'])}"
+                f"在前台运行 V2Ray: {highlight(config['run-in-front'])}"
             )
             input_str = input().strip()
             if input_str == '':
@@ -384,8 +379,6 @@ def main():
                     vmess_index, freedom_index = 0, vmess_index
             elif input_str == 'f':
                 config['run-in-front'] = not config['run-in-front']
-            elif input_str == 's':
-                config['use-sudo'] = not config['use-sudo']
             elif input_str == 'r':
                 if v2ray['routing']['rules']:
                     config['config']['routing']['rules'] = v2ray['routing']['rules']
