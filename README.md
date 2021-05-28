@@ -55,7 +55,6 @@ gfw github.com
 默认出站: freedom
 要连接的配置: 美国3: www.my-server.com
 在前台运行 V2Ray: False
-使用 sudo 运行 V2Ray: True
 
 ```
 
