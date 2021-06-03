@@ -124,7 +124,8 @@ def update_connections(do_print=False):
             if do_print:
                 echo.append(f"{highlight(next(count), 34)}\t{connection2['ps']}\t\t{connection2['add']}\n")
     if do_print:
-        os.system(f'''echo "{''.join(echo)}" | less -r''')  # 我不知道怎么正确地通过两个 subprocess.PIPE 传递输入
+        # TODO: 通过两个 subprocess.PIPE 传递输入
+        os.system(f'''echo "{''.join(echo)}" | less -r''')
 
 
 def get_connection(string):
@@ -133,12 +134,24 @@ def get_connection(string):
     try:
         connection = json.loads(b64decode(string.replace('vmess://', '')))
         if 'v' in connection and connection['v'] != '2':
-            print(f"不支持 version {connection['v']}")
+            print(f"仅支持 version 2 连接, 当前连接 version {connection['v']}")
             return None
-        return {
-            'sorted': False,
-            **connection,
+        sorted_connection = {
+            'ps': connection['ps'],
+            'add': connection['add'],
+            'port': connection['port'],
+            'id': connection['id'],
+            'aid': connection['aid'] if 'aid' in connection else '0',
+            'net': connection['net'],
+            'type': connection['type'],
+            'host': connection['host'] if 'host' in connection else '',
+            'path': connection['path'] if 'path' in connection else '',
+            'tls': connection['tls'] if 'tls' in connection else '',
         }
+        new_keys = connection.keys() - (sorted_connection.keys() | {'v'})
+        if new_keys:
+            print(f'未识别的键: {new_keys}: {connection}')
+        return sorted_connection
     except Exception as e:
         print(f'{type(e).__name__}: {e}')
         return None
@@ -266,37 +279,14 @@ def set_connection():
         if 'dns' in v2ray and 'servers' in v2ray['dns']:
             for server in v2ray['dns']['servers']:
                 if isinstance(server, dict) and 'domains' in server:
-                    domainItem = f"domain:{config['current-connection']['add']}"
-                    if domainItem in server['domains']:
-                        server['domains'].remove(domainItem)
+                    domain_item = f"domain:{config['current-connection']['add']}"
+                    if domain_item in server['domains']:
+                        server['domains'].remove(domain_item)
     add_address(main_vnext['address'], 'cn', False)
     config['current-connection'] = connection
 
 
-def sort_connection_keys(connection):
-    if 'sorted' in connection:
-        connection = {
-            'ps': connection['ps'],
-            'add': connection['add'],
-            'port': connection['port'],
-            'id': connection['id'],
-            'aid': connection['aid'] if 'aid' in connection else '0',
-            'net': connection['net'],
-            'type': connection['type'],
-            'host': connection['host'] if 'host' in connection else '',
-            'path': connection['path'] if 'path' in connection else '',
-            'tls': connection['tls'] if 'tls' in connection else '',
-        }
-        return connection
-    return connection
-
-
 def save_config():
-    for i1, connection1 in enumerate(imported):
-        imported[i1] = sort_connection_keys(connection1)
-    for url2 in subscriptions.keys():
-        for i2, connection2 in enumerate(subscriptions[url2]):
-            subscriptions[url2][i2] = sort_connection_keys(connection2)
     config_path.write_text(yaml.safe_dump(config, indent=4, allow_unicode=True, sort_keys=False))
     v2ray_path.write_text(json.dumps(v2ray, indent=4))
 
@@ -323,7 +313,7 @@ def main():
             if first:
                 first = False
                 print(
-                    '以下为: "功能: 键入的内容"\n'
+                    '功能列表: "功能描述: 输入"\n'
                     '从剪贴板添加 vmess 连接配置: c\n'
                     '添加订阅地址: <订阅地址>\n'
                     '更新订阅: u\n'
@@ -363,8 +353,8 @@ def main():
                     for thread2 in threads:
                         thread2.join()
                 except KeyboardInterrupt:
-                    print()
                     do_update_subscriptions = False
+                    print()
             elif input_str == 'p':
                 update_connections(do_print=True)
             elif input_str == 'q':
