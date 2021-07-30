@@ -296,7 +296,7 @@ def set_connection():
 
         def set_header(prefix):
             settings = f'{prefix}Settings'
-            stream_settings.setdefault('settings', {'header': {}})
+            stream_settings.setdefault(settings, {'header': {}})
             stream_settings[settings].setdefault('header', {})
             stream_settings[settings]['header']['type'] = connection['type']
 
