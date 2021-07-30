@@ -13,6 +13,9 @@ import pyperclip
 import requests
 import yaml
 
+proxy_protocols = ('vmess', 'shadowsocks')
+proxy_protocols_abbr = ('vmess', 'ss')
+
 parser = argparse.ArgumentParser()
 user = os.getenv('SUDO_USER')
 default_path = Path('/' if user == 'root' else '/home') / user / '.config' / 'V2Ray-Manager'
@@ -48,11 +51,13 @@ out_bounds = v2ray['outbounds']
 
 connections = []
 
-vmess = {}
+# v2ray的子对象的引用
+proxy = {}
 freedom = {}
-vmess_index = 0
+proxy_index = 0
 freedom_index = 0
 
+# v2ray的子对象的引用
 gfw_domain = []
 gfw_ip = []
 cn_domain = []
@@ -60,8 +65,7 @@ cn_ip = []
 dns_gfw = []
 dns_cn = []
 
-main_vnext = {}
-main_user = {}
+# v2ray的子对象的引用
 stream_settings = {}
 
 input_str = ''
@@ -70,19 +74,19 @@ do_update_subscriptions = False
 
 
 def init():
-    global vmess, vmess_index, freedom, freedom_index, gfw_domain, gfw_ip, cn_domain, cn_ip, dns_gfw, dns_cn, \
-        main_vnext, main_user, stream_settings
+    global proxy, proxy_index, freedom, freedom_index, \
+        gfw_domain, gfw_ip, cn_domain, cn_ip, dns_gfw, dns_cn, stream_settings
     for index1, out1 in enumerate(out_bounds):
         out_protocol = out1['protocol']
-        if out_protocol == 'vmess':
-            vmess = out1
-            vmess_index = index1
+        if out_protocol in proxy_protocols:
+            proxy = out1
+            proxy_index = index1
         elif out_protocol == 'freedom':
             freedom = out1
             freedom_index = index1
     for rule1 in v2ray['routing']['rules']:
         outbound_tag = rule1['outboundTag']
-        if outbound_tag == vmess['tag']:
+        if outbound_tag == proxy['tag']:
             if 'domain' in rule1:
                 gfw_domain = rule1['domain']
             elif 'ip' in rule1:
@@ -100,9 +104,7 @@ def init():
                     dns_gfw = dns_domains
                 elif 'geosite:cn' in dns_domains:
                     dns_cn = dns_domains
-    main_vnext = vmess['settings']['vnext'][0]
-    main_user = main_vnext['users'][0]
-    stream_settings = vmess['streamSettings']
+    stream_settings = proxy['streamSettings']
 
 
 def update_connections(do_print=False):
@@ -115,43 +117,56 @@ def update_connections(do_print=False):
     for connection1 in imported:
         connections.append(connection1)
         if do_print:
-            echo.append(f"{highlight(next(count), 34)}\t{connection1['ps']}\t\t{connection1['add']}\n")
+            echo.append(f"{highlight(next(count), 34)}\t{connection1['remarks']}\t\t{connection1['address']}\n")
     for url1, connections1 in subscriptions.items():
         if do_print:
             echo.append(f'{highlight(url1, 32)}\n')
         for connection2 in connections1:
             connections.append(connection2)
             if do_print:
-                echo.append(f"{highlight(next(count), 34)}\t{connection2['ps']}\t\t{connection2['add']}\n")
+                echo.append(f"{highlight(next(count), 34)}\t{connection2['remarks']}\t\t{connection2['address']}\n")
     if do_print:
         # TODO: 通过两个 subprocess.PIPE 传递输入
         os.system(f'''echo "{''.join(echo)}" | less -r''')
 
 
 def get_connection(string):
-    if not string.startswith('vmess://'):
+    protocol = re.search(rf"^({'|'.join(proxy_protocols_abbr)})://", string)
+    if not protocol:
         return None
     try:
-        connection = json.loads(b64decode(string.replace('vmess://', '')))
-        if 'v' in connection and connection['v'] != '2':
-            print(f"仅支持 version 2 连接, 当前连接 version {connection['v']}")
-            return None
-        sorted_connection = {
-            'ps': connection['ps'],
-            'add': connection['add'],
-            'port': connection['port'],
-            'id': connection['id'],
-            'aid': connection['aid'] if 'aid' in connection else '0',
-            'net': connection['net'],
-            'type': connection['type'],
-            'host': connection['host'] if 'host' in connection else '',
-            'path': connection['path'] if 'path' in connection else '',
-            'tls': connection['tls'] if 'tls' in connection else '',
-        }
-        new_keys = connection.keys() - (sorted_connection.keys() | {'v'})
-        if new_keys:
-            print(f'未识别的键: {new_keys}: {connection}')
-        return sorted_connection
+        string = string.removeprefix(protocol.group(0))
+        protocol = protocol.group(1)
+        if protocol == 'vmess':
+            connection_vmess = json.loads(b64decode(string))
+            if 'v' in connection_vmess and connection_vmess['v'] != '2':
+                print(f"仅支持 version 2 连接, 当前连接 version {connection_vmess['v']}")
+                return None
+            return {
+                '_protocol': protocol,
+                'remarks': connection_vmess['ps'],
+                'address': connection_vmess['add'],
+                'port': int(connection_vmess['port']),
+                'id': connection_vmess['id'],
+                'aid': int(connection_vmess['aid']) if 'aid' in connection_vmess else 0,
+                'net': connection_vmess['net'],
+                'type': connection_vmess['type'],
+                'host': connection_vmess['host'] if 'host' in connection_vmess else '',
+                'path': connection_vmess['path'] if 'path' in connection_vmess else '',
+                'tls': connection_vmess['tls'] if 'tls' in connection_vmess else '',
+            }
+        elif protocol == 'ss':
+            connection_ss, ps = string.split('#')
+            connection_ss = b64decode(connection_ss).decode()
+            search = re.search('^(?P<method>.+?):(?P<password>.+)@(?P<address>.+?):(?P<port>[0-9]+)$', connection_ss)
+            return {
+                '_protocol': protocol,
+                'remarks': ps,
+                'address': search.group('address'),
+                'port': int(search.group('port')),
+                'method': search.group('method'),
+                'password': search.group('password'),
+            }
     except Exception as e:
         print(f'{type(e).__name__}: {e}')
         return None
@@ -250,39 +265,47 @@ def set_connection():
     if not connections:
         update_connections()
     connection = connections[int(input_str) - 1]
-    main_vnext['address'] = connection['add']
-    main_vnext['port'] = int(connection['port'])
-    main_user['id'] = connection['id']
-    main_user['alterId'] = int(connection['aid'])
-    stream_settings['network'] = connection['net']
+    if connection['_protocol'] == 'vmess':
+        proxy['protocol'] = 'vmess'
+        proxy['settings'].setdefault('vnext', [{'users': [{}]}])
+        proxy['settings']['vnext'][0]['address'] = connection['address']
+        proxy['settings']['vnext'][0]['port'] = connection['port']
+        proxy['settings']['vnext'][0]['users'][0]['id'] = connection['id']
+        proxy['settings']['vnext'][0]['users'][0]['alterId'] = connection['aid']
+        stream_settings['network'] = connection['net']
+        stream_settings['security'] = connection['tls']
 
-    def set_header(prefix):
-        settings = f'{prefix}Settings'
-        if settings not in stream_settings:
-            stream_settings[settings] = {'header': {}}
-        elif 'header' not in stream_settings[settings]:
-            stream_settings[settings]['header'] = {}
-        stream_settings[settings]['header']['type'] = connection['type']
+        def set_header(prefix):
+            settings = f'{prefix}Settings'
+            stream_settings.setdefault('settings', {'header': {}})
+            stream_settings[settings].setdefault('header', {})
+            stream_settings[settings]['header']['type'] = connection['type']
 
-    if stream_settings['network'] == 'ws':
-        if 'wsSettings' not in stream_settings:
-            stream_settings['wsSettings'] = {'headers': {}}
-        elif 'headers' not in stream_settings['wsSettings']:
-            stream_settings['wsSettings']['headers'] = {}
-        stream_settings['wsSettings']['headers']['Host'] = connection['host']
-        stream_settings['wsSettings']['path'] = connection['path']
-    else:
-        # tcp, kcp, quic
-        set_header(stream_settings['network'])
-    stream_settings['security'] = connection['tls']
+        if stream_settings['network'] == 'ws':
+            stream_settings.setdefault('wsSettings', {'headers': {}})
+            stream_settings['wsSettings'].setdefault('headers', {})
+            stream_settings['wsSettings']['headers']['Host'] = connection['host']
+            stream_settings['wsSettings']['path'] = connection['path']
+        else:
+            # tcp, kcp, quic
+            set_header(stream_settings['network'])
+    elif connection['_protocol'] == 'ss':
+        proxy['protocol'] = 'shadowsocks'
+        proxy['settings'].setdefault('servers', [{}])
+        proxy['settings']['servers'][0]['address'] = connection['address']
+        proxy['settings']['servers'][0]['port'] = connection['port']
+        proxy['settings']['servers'][0]['method'] = connection['method']
+        proxy['settings']['servers'][0]['password'] = connection['password']
+        stream_settings['network'] = 'tcp'
+
     if config['current-connection']:
         if 'dns' in v2ray and 'servers' in v2ray['dns']:
             for server in v2ray['dns']['servers']:
                 if isinstance(server, dict) and 'domains' in server:
-                    domain_item = f"domain:{config['current-connection']['add']}"
+                    domain_item = f"domain:{config['current-connection']['address']}"
                     if domain_item in server['domains']:
                         server['domains'].remove(domain_item)
-    add_address(main_vnext['address'], 'cn', False)
+    add_address(connection['address'], 'cn', False)
     config['current-connection'] = connection
 
 
@@ -305,7 +328,7 @@ def highlight(string, code=33):
 
 
 def main():
-    global input_str, vmess_index, freedom_index, do_update_subscriptions
+    global input_str, proxy_index, freedom_index, do_update_subscriptions
     init()
     first = True
     while True:
@@ -314,7 +337,7 @@ def main():
                 first = False
                 print(
                     '功能列表: "功能描述: 输入"\n'
-                    '从剪贴板添加 vmess 连接配置: c\n'
+                    f'从剪贴板添加 {proxy_protocols_abbr} 连接配置: c\n'
                     '添加订阅地址: <订阅地址>\n'
                     '更新订阅: u\n'
                     '查看配置列表: p\n'
@@ -322,7 +345,7 @@ def main():
                     '保存配置并运行: (回车)\n'
                     '保存配置并退出: q\n'
                     '向黑白名单列表(rules与dns)添加域名或IP: (形如 "gfw google.com" 或 "cn 223.5.5.5")\n'
-                    '切换默认出站(freedom/vmess): d\n'
+                    '切换默认出站(freedom/proxy): d\n'
                     '切换前台运行 V2Ray: f\n'
                     '移除所有规则并备份, 或从备份中恢复: r\n'
                     '移除拦截广告的规则并备份, 或从备份中恢复: a'
@@ -330,7 +353,7 @@ def main():
             print(
                 f"\n默认出站: {highlight(out_bounds[0]['protocol'])}\n"
                 f'''要连接的配置: {highlight(
-                    f"{config['current-connection']['ps']}: {config['current-connection']['add']}"
+                    f"{config['current-connection']['remarks']}: {config['current-connection']['address']}"
                     if config['current-connection'] else ''
                 )}\n'''
                 f"在前台运行 V2Ray: {highlight(config['run-in-front'])}"
@@ -361,12 +384,12 @@ def main():
                 save_config()
                 exit()
             elif input_str == 'd':
-                if out_bounds[0]['protocol'] == 'vmess':
+                if out_bounds[0]['protocol'] in proxy_protocols:
                     out_bounds[0], out_bounds[freedom_index] = out_bounds[freedom_index], out_bounds[0]
-                    vmess_index, freedom_index = freedom_index, 0
+                    proxy_index, freedom_index = freedom_index, 0
                 else:
-                    out_bounds[0], out_bounds[vmess_index] = out_bounds[vmess_index], out_bounds[0]
-                    vmess_index, freedom_index = 0, vmess_index
+                    out_bounds[0], out_bounds[proxy_index] = out_bounds[proxy_index], out_bounds[0]
+                    proxy_index, freedom_index = 0, proxy_index
             elif input_str == 'f':
                 config['run-in-front'] = not config['run-in-front']
             elif input_str == 'r':
