@@ -178,6 +178,25 @@ def add_import(connection):
         imported.append(connection)
 
 
+def update_subscriptions_wrapper(urls=None):
+    global do_update_subscriptions
+    print('Ctrl+C 以终止')
+    do_update_subscriptions = True
+    threads = []
+    if not urls:
+        urls = subscriptions.keys()
+    for url in urls:
+        thread1 = Thread(target=update_subscriptions, args=(url,))
+        threads.append(thread1)
+        thread1.start()
+    try:
+        for thread2 in threads:
+            thread2.join()
+    except KeyboardInterrupt:
+        do_update_subscriptions = False
+        print()
+
+
 def update_subscriptions(url):
     for _ in range(3):
         if not do_update_subscriptions:
@@ -365,19 +384,7 @@ def main():
                 for connection in re.split(r'\n|\\n', pyperclip.paste()):
                     add_import(connection)
             elif input_str == 'u':
-                print('Ctrl+C 以终止')
-                do_update_subscriptions = True
-                threads = []
-                for url1, connection1 in subscriptions.items():
-                    thread1 = Thread(target=update_subscriptions, args=(url1,))
-                    threads.append(thread1)
-                    thread1.start()
-                try:
-                    for thread2 in threads:
-                        thread2.join()
-                except KeyboardInterrupt:
-                    do_update_subscriptions = False
-                    print()
+                update_subscriptions_wrapper()
             elif input_str == 'p':
                 update_connections(do_print=True)
             elif input_str == 'q':
@@ -423,7 +430,8 @@ def main():
                 # 订阅地址
                 if not input_str.startswith('http'):
                     input_str = f'http://{input_str}'
-                update_subscriptions(input_str)
+                print('更新订阅')
+                update_subscriptions_wrapper([input_str])
         except Exception as e:
             print(f'{type(e).__name__}: {e}')
 
