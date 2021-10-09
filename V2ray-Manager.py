@@ -58,10 +58,10 @@ proxy_index = 0
 freedom_index = 0
 
 # v2ray的子对象的引用
-gfw_domain = []
-gfw_ip = []
-cn_domain = []
-cn_ip = []
+domain_gfw = []
+ip_gfw = []
+domain_cn = []
+ip_cn = []
 dns_gfw = []
 dns_cn = []
 
@@ -69,13 +69,13 @@ dns_cn = []
 stream_settings = {}
 
 input_str = ''
-
+has_set_connections = False
 do_update_subscriptions = False
 
 
 def init():
     global proxy, proxy_index, freedom, freedom_index, \
-        gfw_domain, gfw_ip, cn_domain, cn_ip, dns_gfw, dns_cn, stream_settings
+        domain_gfw, ip_gfw, domain_cn, ip_cn, dns_gfw, dns_cn, stream_settings
     for index1, out1 in enumerate(out_bounds):
         out_protocol = out1['protocol']
         if out_protocol in proxy_protocols:
@@ -88,14 +88,14 @@ def init():
         outbound_tag = rule1['outboundTag']
         if outbound_tag == proxy['tag']:
             if 'domain' in rule1:
-                gfw_domain = rule1['domain']
+                domain_gfw = rule1['domain']
             elif 'ip' in rule1:
-                gfw_ip = rule1['ip']
+                ip_gfw = rule1['ip']
         elif outbound_tag == freedom['tag']:
             if 'domain' in rule1:
-                cn_domain = rule1['domain']
+                domain_cn = rule1['domain']
             elif 'ip' in rule1:
-                cn_ip = rule1['ip']
+                ip_cn = rule1['ip']
     if 'dns' in v2ray and 'servers' in v2ray['dns']:
         for server1 in v2ray['dns']['servers']:
             if isinstance(server1, dict):
@@ -227,48 +227,42 @@ def update_subscriptions(url):
         print(f'返回空配置列表, 未更改: {url}')
 
 
-def add_address(address, target, rules):
+def add_address(address, target, rules, warning=True):
     if re.search(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', address):
         if not rules:
             return
         if target == 'gfw':
-            if address in gfw_ip:
+            if address in ip_gfw and warning:
                 print(f'已经存在于 GFW IPs: {address}')
             else:
-                gfw_ip.append(address)
+                ip_gfw.append(address)
         else:
-            if address in cn_ip:
+            if address in ip_cn and warning:
                 print(f'已经存在于 CN IPs: {address}')
             else:
-                cn_ip.append(address)
+                ip_cn.append(address)
     else:
         if address.startswith('http'):
             address = re.sub(r'https?://', '', address)
         domain_item = f'domain:{address}'
+
+        def set_target(domain_list, dns_list):
+            if rules:
+                if domain_list:
+                    if domain_item in domain_list and warning:
+                        print(f"已经存在于 {target.upper()} domains: {domain_item}")
+                    else:
+                        domain_list.append(domain_item)
+            if dns_list:
+                if domain_item in dns_list and warning:
+                    print(f'已经存在于 {target.upper()} DNS domains: {domain_item}')
+                else:
+                    dns_list.append(domain_item)
+
         if target == 'gfw':
-            if rules:
-                if gfw_domain:
-                    if domain_item in gfw_domain:
-                        print(f'已经存在于 GFW domains: {domain_item}')
-                    else:
-                        gfw_domain.append(domain_item)
-            if dns_gfw:
-                if domain_item in dns_gfw:
-                    print(f'已经存在于 GFW DNS domains: {domain_item}')
-                else:
-                    dns_gfw.append(domain_item)
+            set_target(domain_gfw, dns_gfw)
         else:
-            if rules:
-                if cn_domain:
-                    if domain_item in cn_domain:
-                        print(f'已经存在于 CN domains: {domain_item}')
-                    else:
-                        cn_domain.append(domain_item)
-            if dns_cn:
-                if domain_item in dns_cn:
-                    print(f"已经存在于 CN DNS domains: {domain_item}")
-                else:
-                    dns_cn.append(domain_item)
+            set_target(domain_cn, dns_cn)
 
 
 def add_address_from_input_str():
@@ -280,10 +274,13 @@ def add_address_from_input_str():
     add_address(address, target, True)
 
 
-def set_connection():
+def set_connection(from_input=True):
+    global has_set_connections
+    if not from_input and has_set_connections:
+        return
     if not connections:
         update_connections()
-    connection = connections[int(input_str) - 1]
+    connection = connections[int(input_str) - 1] if from_input else config['current-connection']
     if connection['_protocol'] == 'vmess':
         proxy['protocol'] = 'vmess'
         proxy['settings'].setdefault('vnext', [{'users': [{}]}])
@@ -324,8 +321,9 @@ def set_connection():
                     domain_item = f"domain:{config['current-connection']['address']}"
                     if domain_item in server['domains']:
                         server['domains'].remove(domain_item)
-    add_address(connection['address'], 'cn', False)
+    add_address(connection['address'], 'cn', False, warning=from_input)
     config['current-connection'] = connection
+    has_set_connections = True
 
 
 def save_config():
@@ -333,7 +331,8 @@ def save_config():
     v2ray_path.write_text(json.dumps(v2ray, indent=4))
 
 
-def generate_and_restart_and_exit():
+def save_and_run_and_exit():
+    set_connection(from_input=False)
     save_config()
     if config['run-in-front']:
         os.system(f"{config['v2ray-command']}")
@@ -379,7 +378,7 @@ def main():
             )
             input_str = input().strip()
             if input_str == '':
-                generate_and_restart_and_exit()
+                save_and_run_and_exit()
             elif input_str == 'c':
                 for connection in re.split('\n|\\n', pyperclip.paste()):
                     add_import(connection)
