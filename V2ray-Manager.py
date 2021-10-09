@@ -381,7 +381,7 @@ def main():
             if input_str == '':
                 generate_and_restart_and_exit()
             elif input_str == 'c':
-                for connection in re.split(r'\n|\\n', pyperclip.paste()):
+                for connection in re.split('\n|\\n', pyperclip.paste()):
                     add_import(connection)
             elif input_str == 'u':
                 update_subscriptions_wrapper()
