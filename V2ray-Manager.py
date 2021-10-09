@@ -76,30 +76,30 @@ do_update_subscriptions = False
 def init():
     global proxy, proxy_index, freedom, freedom_index, \
         domain_gfw, ip_gfw, domain_cn, ip_cn, dns_gfw, dns_cn, stream_settings
-    for index1, out1 in enumerate(out_bounds):
-        out_protocol = out1['protocol']
+    for index, out in enumerate(out_bounds):
+        out_protocol = out['protocol']
         if out_protocol in proxy_protocols:
-            proxy = out1
-            proxy_index = index1
+            proxy = out
+            proxy_index = index
         elif out_protocol == 'freedom':
-            freedom = out1
-            freedom_index = index1
-    for rule1 in v2ray['routing']['rules']:
-        outbound_tag = rule1['outboundTag']
+            freedom = out
+            freedom_index = index
+    for rule in v2ray['routing']['rules']:
+        outbound_tag = rule['outboundTag']
         if outbound_tag == proxy['tag']:
-            if 'domain' in rule1:
-                domain_gfw = rule1['domain']
-            elif 'ip' in rule1:
-                ip_gfw = rule1['ip']
+            if 'domain' in rule:
+                domain_gfw = rule['domain']
+            elif 'ip' in rule:
+                ip_gfw = rule['ip']
         elif outbound_tag == freedom['tag']:
-            if 'domain' in rule1:
-                domain_cn = rule1['domain']
-            elif 'ip' in rule1:
-                ip_cn = rule1['ip']
+            if 'domain' in rule:
+                domain_cn = rule['domain']
+            elif 'ip' in rule:
+                ip_cn = rule['ip']
     if 'dns' in v2ray and 'servers' in v2ray['dns']:
-        for server1 in v2ray['dns']['servers']:
-            if isinstance(server1, dict):
-                dns_domains = server1['domains']
+        for server in v2ray['dns']['servers']:
+            if isinstance(server, dict):
+                dns_domains = server['domains']
                 if 'geosite:google' in dns_domains:
                     dns_gfw = dns_domains
                 elif 'geosite:cn' in dns_domains:
@@ -114,17 +114,17 @@ def update_connections(do_print=False):
     count = itertools.count(1)
     if do_print:
         echo.append(f"{highlight('imported', 32)}\n")
-    for connection1 in imported:
-        connections.append(connection1)
+    for connection in imported:
+        connections.append(connection)
         if do_print:
-            echo.append(f"{highlight(next(count), 34)}\t{connection1['remarks']}\t\t{connection1['address']}\n")
-    for url1, connections1 in subscriptions.items():
+            echo.append(f"{highlight(next(count), 34)}\t{connection['remarks']}\t\t{connection['address']}\n")
+    for url, connections1 in subscriptions.items():
         if do_print:
-            echo.append(f'{highlight(url1, 32)}\n')
-        for connection2 in connections1:
-            connections.append(connection2)
+            echo.append(f'{highlight(url, 32)}\n')
+        for connection1 in connections1:
+            connections.append(connection1)
             if do_print:
-                echo.append(f"{highlight(next(count), 34)}\t{connection2['remarks']}\t\t{connection2['address']}\n")
+                echo.append(f"{highlight(next(count), 34)}\t{connection1['remarks']}\t\t{connection1['address']}\n")
     if do_print:
         # TODO: 通过两个 subprocess.PIPE 传递输入
         os.system(f'''echo "{''.join(echo)}" | less -r''')
@@ -326,6 +326,23 @@ def set_connection(from_input=True):
     has_set_connections = True
 
 
+def handle_adblock_rules_backup():
+    if not v2ray['routing']['rules']:
+        return
+    ok = False
+    rule_index = -1
+    for rule_index, rule in enumerate(v2ray['routing']['rules']):
+        if 'domain' in rule and 'geosite:category-ads-all' in rule['domain']:
+            ok = True
+            rule_index = rule_index
+            break
+    if ok:
+        config['config']['routing']['_category-ads-all'] = v2ray['routing']['rules'][rule_index]
+        v2ray['routing']['rules'].pop(rule_index)
+    else:
+        v2ray['routing']['rules'].append(config['config']['routing']['_category-ads-all'])
+
+
 def save_config():
     config_path.write_text(yaml.safe_dump(config, indent=4, allow_unicode=True, sort_keys=False))
     v2ray_path.write_text(json.dumps(v2ray, indent=4))
@@ -405,20 +422,7 @@ def main():
                 else:
                     v2ray['routing']['rules'] = config['config']['routing']['rules']
             elif input_str == 'a':
-                if not v2ray['routing']['rules']:
-                    continue
-                ok1 = False
-                rule_index = -1
-                for rule_index1, rule1 in enumerate(v2ray['routing']['rules']):
-                    if 'domain' in rule1 and 'geosite:category-ads-all' in rule1['domain']:
-                        ok1 = True
-                        rule_index = rule_index1
-                        break
-                if ok1:
-                    config['config']['routing']['_category-ads-all'] = v2ray['routing']['rules'][rule_index]
-                    v2ray['routing']['rules'].pop(rule_index)
-                else:
-                    v2ray['routing']['rules'].append(config['config']['routing']['_category-ads-all'])
+                handle_adblock_rules_backup()
             elif input_str.isdecimal():
                 # 选择要连接的配置
                 set_connection()
