@@ -226,7 +226,14 @@ def update_subscriptions(url, do):
         except Exception as e:
             if not do[0]:
                 return
-            logging.error(f'{type(e).__name__}: {e}', exc_info=True)
+            if type(e) in (
+                    requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError,
+                    requests.exceptions.ReadTimeout, requests.exceptions.ChunkedEncodingError,
+                    requests.exceptions.SSLError
+            ):
+                logging.error(f'{type(e).__name__}: {e}')
+            else:
+                logging.error(f'{type(e).__name__}: {e}', exc_info=True)
             continue
     else:
         print(f'更新失败: {url}')
