@@ -1,17 +1,26 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
 import argparse
+import binascii
 import itertools
 import json
+import logging
 import os
 import re
 from base64 import b64decode
 from pathlib import Path
 from threading import Thread
+from urllib.parse import unquote_plus
 
+import coloredlogs
 import pyperclip
 import requests
 import yaml
+
+coloredlogs.install(fmt='%(asctime)s %(levelname)s %(message)s')
+logging.getLogger('urllib3').setLevel(logging.FATAL)
+logging.getLogger('chardet').setLevel(logging.INFO)
+logging.getLogger('hpack').setLevel(logging.INFO)
 
 proxy_protocols = ('vmess', 'shadowsocks')
 proxy_protocols_abbr = ('vmess', 'ss')
@@ -70,7 +79,6 @@ stream_settings = {}
 
 input_str = ''
 has_set_connections = False
-do_update_subscriptions = False
 
 
 def init():
@@ -130,12 +138,12 @@ def update_connections(do_print=False):
         os.system(f'''echo "{''.join(echo)}" | less -r''')
 
 
-def get_connection(string):
-    protocol = re.search(rf"^({'|'.join(proxy_protocols_abbr)})://", string)
+def get_connection(raw_string):
+    protocol = re.search(rf"^({'|'.join(proxy_protocols_abbr)})://", raw_string)
     if not protocol:
         return None
     try:
-        string = string.removeprefix(protocol.group(0))
+        string = raw_string.removeprefix(protocol.group(0))
         protocol = protocol.group(1)
         if protocol == 'vmess':
             connection_vmess = json.loads(b64decode(string))
@@ -156,19 +164,30 @@ def get_connection(string):
                 'tls': connection_vmess['tls'] if 'tls' in connection_vmess else '',
             }
         elif protocol == 'ss':
-            connection_ss, ps = string.split('#')
-            connection_ss = b64decode(connection_ss).decode()
-            search = re.search('^(?P<method>.+?):(?P<password>.+)@(?P<address>.+?):(?P<port>[0-9]+)$', connection_ss)
+            search = re.search(
+                r'^(?P<connection>.+?)(@(?P<address>[\d.:]+):(?P<port>\d+))?#(?P<ps>.+?)$',
+                string, flags=re.ASCII
+            )
+            address, port = search.group('address'), search.group('port')
+            connection_search = re.search(
+                r'^(?P<method>.+?):(?P<password>.+?)(@(?P<address>[\d.:]+):(?P<port>\d+))?$',
+                b64decode(search.group('connection')).decode(), flags=re.ASCII,
+            )
+            if not address:
+                address, port = connection_search.group('address'), connection_search.group('port')
             return {
                 '_protocol': protocol,
-                'remarks': ps,
-                'address': search.group('address'),
-                'port': int(search.group('port')),
-                'method': search.group('method'),
-                'password': search.group('password'),
+                'remarks': unquote_plus(search.group('ps')),
+                'address': address,
+                'port': int(port),
+                'method': connection_search.group('method'),
+                'password': connection_search.group('password'),
             }
+    except binascii.Error:
+        print(f'Base64 解码失败: {raw_string}')
+        return None
     except Exception as e:
-        print(f'{type(e).__name__}: {e}')
+        logging.error(f'{type(e).__name__}: {e}', exc_info=True)
         return None
 
 
@@ -179,36 +198,35 @@ def add_import(connection):
 
 
 def update_subscriptions_wrapper(urls=None):
-    global do_update_subscriptions
-    print('Ctrl+C 以终止')
-    do_update_subscriptions = True
+    print('更新订阅, Ctrl+C 以终止')
+    do = [True]
     threads = []
     if not urls:
         urls = subscriptions.keys()
     for url in urls:
-        thread1 = Thread(target=update_subscriptions, args=(url,))
+        thread1 = Thread(target=update_subscriptions, args=(url, do))
         threads.append(thread1)
         thread1.start()
     try:
         for thread2 in threads:
             thread2.join()
     except KeyboardInterrupt:
-        do_update_subscriptions = False
+        do[0] = False
         print()
 
 
-def update_subscriptions(url):
+def update_subscriptions(url, do):
     for _ in range(3):
-        if not do_update_subscriptions:
+        if not do[0]:
             return
         try:
             response = requests.get(url, timeout=10)
             new_connections = b64decode(response.text).decode()
             break
         except Exception as e:
-            if not do_update_subscriptions:
+            if not do[0]:
                 return
-            print(f'{type(e).__name__}: {e}')
+            logging.error(f'{type(e).__name__}: {e}', exc_info=True)
             continue
     else:
         print(f'更新失败: {url}')
@@ -219,7 +237,7 @@ def update_subscriptions(url):
         if connection:
             new_subscriptions.append(connection)
     if new_subscriptions:
-        if not do_update_subscriptions:
+        if not do[0]:
             return
         subscriptions[url] = new_subscriptions
         print(f'已更新: {url}')
@@ -363,7 +381,7 @@ def highlight(string, code=33):
 
 
 def main():
-    global input_str, proxy_index, freedom_index, do_update_subscriptions
+    global input_str, proxy_index, freedom_index
     init()
     first = True
     while True:
@@ -433,10 +451,9 @@ def main():
                 # 订阅地址
                 if not input_str.startswith('http'):
                     input_str = f'http://{input_str}'
-                print('更新订阅')
                 update_subscriptions_wrapper([input_str])
         except Exception as e:
-            print(f'{type(e).__name__}: {e}')
+            logging.error(f'{type(e).__name__}: {e}', exc_info=True)
 
 
 main()
